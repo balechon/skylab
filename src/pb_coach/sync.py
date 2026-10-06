@@ -31,7 +31,7 @@ class ResultadoSync(BaseModel):
     nuevas: int
 
 
-def _rpe_desde() -> date:
+def rpe_desde_configurado() -> date:
     valor = os.environ.get("GARMIN_RPE_DESDE")
     return date.fromisoformat(valor) if valor else RPE_DESDE_POR_DEFECTO
 
@@ -57,7 +57,7 @@ async def sincronizar(
 async def _main() -> None:
     sesiones_db = crear_sesiones(crear_engine())
     async with ClienteGarmin() as cliente:
-        resultado = await sincronizar(sesiones_db, cliente, rpe_desde=_rpe_desde())
+        resultado = await sincronizar(sesiones_db, cliente, rpe_desde=rpe_desde_configurado())
     print(
         f"Sync {resultado.desde} → {resultado.hasta}: "
         f"{resultado.traidas} actividades de running, {resultado.nuevas} nuevas."

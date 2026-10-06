@@ -54,7 +54,7 @@ methodology/    Perfiles de metodología (YAML), uno por autor/framework
 src/pb_coach/
   domain/       Modelos de datos puros (Sesión, Mesociclo, Plan, ...)
   engine/       Motor determinista: loader, calculator, validator, deviation
-  agent/        Capa LLM: planner, evaluator, explainer
+  agent/        Capa LLM: bucle (agente), tools, guardia final y servicio
   mcp_client/   Cliente MCP de garmin-mcp (sync de actividades, publicar semana)
   persistence/  Postgres: modelos SQLAlchemy y repositorio
   api/          API HTTP mínima (FastAPI)
@@ -74,7 +74,11 @@ docs/           Visión, decisiones y diagramas (fuente HTML en docs/*/)
   `validator.py`, `deviation.py`) y Postgres en el stack (n8n ya lo usa).
 - Hecho también: persistencia en Postgres (`persistence/`, SQLAlchemy +
   migraciones Alembic en `migrations/`).
-- Siguiente: cliente de garmin-mcp (sync y publicar) y el agente LLM.
+- Hecho también: sync de Garmin (`pb_coach.sync`) y agente LLM (`agent/`:
+  bucle de tool use con Claude, guardia final y servicio que persiste),
+  expuesto en la API (`POST /plan`, `POST /semana/ajustar`, `POST /sync`).
+- Siguiente: publicar la semana en el reloj, workflows de n8n y transcribir
+  el primer perfil real.
 
 ## Setup
 

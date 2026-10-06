@@ -1,0 +1,115 @@
+from datetime import timedelta
+
+from pb_coach.agent.contexto import ContextoAgente
+from pb_coach.agent.guardia import revisar_resultado
+from pb_coach.agent.resultado import EstadoResultado, Operacion, ResultadoAgente
+from pb_coach.domain.methodology import AccionAjuste, MetricaAjuste
+from pb_coach.domain.training import ModoPlan
+from pb_coach.engine.calculator import resumir_periodo
+from pb_coach.engine.deviation import EvaluacionSemana, ReglaActivada
+from pb_coach.engine.validator import Violacion
+from tests.agent.planes import HOY, PERFIL, contexto_ciclo, plan_valido, resultado_valido
+
+
+def test_un_plan_correcto_no_tiene_objeciones():
+    assert revisar_resultado(resultado_valido(), contexto_ciclo()) == []
+
+
+def test_rechaza_reglas_inventadas():
+    problemas = revisar_resultado(resultado_valido(regla_ids=["DANIELS-VDOT-001"]), contexto_ciclo())
+    assert any("no existen en el perfil" in p and "DANIELS-VDOT-001" in p for p in problemas)
+
+
+def test_rechaza_un_plan_que_incumple_el_perfil():
+    plan = plan_valido()
+    plan.mesociclos[0].microciclos[1].objetivos.volumen_km = 60  # +50% sobre 40
+    problemas = revisar_resultado(resultado_valido(plan), contexto_ciclo())
+    assert any("EJEMPLO-PROGRESION-001" in p for p in problemas)
+
+
+def test_la_proxima_semana_debe_estar_detallada():
+    problemas = revisar_resultado(resultado_valido(plan_valido(detallar=1)), contexto_ciclo())
+    assert any("debe tener sesiones concretas" in p for p in problemas)
+
+
+def test_ciclo_nuevo_debe_respetar_la_solicitud():
+    ctx = contexto_ciclo()
+    ctx.solicitud.modo = ModoPlan.COMPETICION
+    problemas = revisar_resultado(resultado_valido(plan_valido(version=2)), ctx)
+    assert any("versión 1" in p for p in problemas)
+    assert any("modo Competición" in p for p in problemas)
+
+
+def test_sin_solucion_solo_exige_reglas_reales():
+    resultado = ResultadoAgente(
+        estado=EstadoResultado.SIN_SOLUCION,
+        violaciones=[Violacion(regla_id="EJEMPLO-GLOBAL-002", mensaje="No hay semanas suficientes.")],
+        resumen="No hay plan posible.",
+    )
+    assert revisar_resultado(resultado, contexto_ciclo()) == []
+
+
+# ---------- ajuste semanal ----------
+
+ANTERIOR = HOY - timedelta(weeks=1)
+
+
+def _contexto_ajuste(accion=None) -> ContextoAgente:
+    evaluacion = None
+    if accion is not None:
+        evaluacion = EvaluacionSemana(
+            resumen=resumir_periodo([], ANTERIOR, HOY - timedelta(days=1)),
+            metricas={MetricaAjuste.ADHERENCIA_VOLUMEN_PCT: 45.0},
+            metricas_no_disponibles=[],
+            accion=accion,
+            reglas_activadas=[accion],
+        )
+    return ContextoAgente(
+        operacion=Operacion.AJUSTE_SEMANAL,
+        hoy=HOY,
+        nombre_perfil="ejemplo_didactico",
+        perfil=PERFIL,
+        sesiones=[],
+        plan_vigente=plan_valido(version=3, primera=ANTERIOR, detallar=0),
+        evaluacion=evaluacion,
+    )
+
+
+def _ajuste(version=4):
+    # Misma estructura que el vigente, con la semana de hoy (índice 1) detallada.
+    plan = plan_valido(version=version, primera=ANTERIOR, detallar=1)
+    plan.mesociclos[0].microciclos[0] = _contexto_ajuste().plan_vigente.mesociclos[0].microciclos[0]
+    return plan
+
+
+def test_ajuste_correcto_no_tiene_objeciones():
+    assert revisar_resultado(resultado_valido(_ajuste()), _contexto_ajuste()) == []
+
+
+def test_ajuste_debe_ser_la_version_siguiente():
+    problemas = revisar_resultado(resultado_valido(_ajuste(version=6)), _contexto_ajuste())
+    assert any("versión 4" in p for p in problemas)
+
+
+def test_ajuste_no_puede_tocar_semanas_pasadas():
+    plan = _ajuste()
+    plan.mesociclos[0].microciclos[0].objetivos.volumen_km = 41
+    problemas = revisar_resultado(resultado_valido(plan), _contexto_ajuste())
+    assert any(f"La semana del {ANTERIOR} ya pasó" in p for p in problemas)
+
+
+def test_ajuste_debe_aplicar_y_citar_la_accion_del_motor():
+    accion = ReglaActivada(
+        regla_id="EJEMPLO-AJUSTE-001",
+        accion=AccionAjuste.REPETIR_MICROCICLO,
+        parametros={},
+        metrica=MetricaAjuste.ADHERENCIA_VOLUMEN_PCT,
+        valor_metrica=45.0,
+        umbral="< 70",
+    )
+    ctx = _contexto_ajuste(accion)
+    sin_citar = revisar_resultado(resultado_valido(_ajuste()), ctx)
+    assert any("EJEMPLO-AJUSTE-001" in p and "repetir_microciclo" in p for p in sin_citar)
+
+    citando = resultado_valido(_ajuste(), regla_ids=["EJEMPLO-PROGRESION-001", "EJEMPLO-AJUSTE-001"])
+    assert revisar_resultado(citando, ctx) == []

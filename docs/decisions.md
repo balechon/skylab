@@ -337,3 +337,33 @@ Específico; resumir en una zona falsearía la intensidad. Las zonas de Garmin
 por defecto probablemente no reflejan su umbral aeróbico real: conviene
 fijarlas con el test que proponga la metodología (pendiente al transcribir
 el perfil).
+
+## 2026-10-06 — Agente: bucle manual, contexto en memoria y guardia en la entrega
+
+**Decisión**:
+- Bucle manual de tool use con `claude-opus-5-5` (effort `high`, tools con
+  `strict: true`, `fallbacks: "default"`, system cacheado), en vez del Tool
+  Runner del SDK, para controlar iteraciones, revisión de cada entrega,
+  rechazos y respuestas truncadas, y poder probarlo con un cliente falso.
+- El agente trabaja sobre un contexto cargado antes del bucle (perfil,
+  sesiones, plan vigente y la evaluación de la semana cerrada ya calculada
+  por el motor); no toca la base de datos. El servicio persiste versión y
+  ejecución en una sola transacción, solo si el resultado fue aceptado.
+- Tools: obtener_perfil, resumen_historial (solo semanas cerradas),
+  obtener_plan, evaluar_semana, validar_plan y entregar_resultado. Los planes
+  viajan como JSON en texto y se validan con Pydantic en el servidor, para
+  devolver al modelo el error exacto.
+- La guardia corre dentro de entregar_resultado: re-valida el plan, rechaza
+  regla_ids inexistentes, exige la acción decidida por el motor, que las
+  semanas pasadas no cambien, la versión siguiente y la próxima semana
+  detallada. Si rechaza, el modelo corrige y vuelve a entregar.
+- La API exige un token compartido; sin token configurado no opera.
+
+**Por qué**: la garantía "nunca inventa metodología" vive en código que se
+puede testear, no en el prompt. Separar contexto, bucle y persistencia hace
+cada parte comprobable sin red ni coste.
+
+**Límite conocido**: la guardia comprueba que se cite la acción de ajuste,
+no que el plan la aplique correctamente (p. ej. que "repetir_microciclo"
+realmente repita la semana). Verificarlo requiere reglas por acción en el
+motor; queda pendiente.

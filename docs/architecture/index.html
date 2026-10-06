@@ -147,7 +147,7 @@
         <div class="tag">Orquestador · mismo VPS</div>
         <h2>n8n</h2>
         <div class="sub">Dispara el proceso (cron semanal / webhook). Sin lógica de dominio.</div>
-        <div class="items"><div class="item"><span class="dot todo"></span>2 workflows: cron semanal + manual</div></div>
+        <div class="items"><div class="item"><span class="dot todo"></span>workflows pendientes</div></div>
       </div>
 
       <div class="box" style="--c:#f0883e; left:60px; top:560px; width:320px; height:140px">
@@ -208,9 +208,10 @@
         <h2>Agente LLM</h2>
         <div class="sub">Interpreta el objetivo, compone el plan y redacta la justificación. Nunca valida por sí solo.</div>
         <div class="items">
-          <div class="item"><span class="dot todo"></span><span class="mono">planner.py</span><span class="note">genera plan</span></div>
-          <div class="item"><span class="dot todo"></span><span class="mono">evaluator.py</span><span class="note">evalúa progreso</span></div>
-          <div class="item"><span class="dot todo"></span><span class="mono">explainer.py</span><span class="note">cita reglas</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">agente.py</span><span class="note">bucle tool use</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">herramientas.py</span><span class="note">tools</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">guardia.py</span><span class="note">revisión final</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">servicio.py</span><span class="note">carga y guarda</span></div>
         </div>
       </div>
 
@@ -239,7 +240,7 @@
         <div class="tag">mcp_client/</div>
         <h2>Cliente MCP</h2>
         <div class="items">
-          <div class="item"><span class="dot todo"></span><span class="mono">garmin.py</span></div>
+          <div class="item"><span class="dot part"></span><span class="mono">garmin.py</span><span class="note">sync ✓ · publicar</span></div>
         </div>
         <div class="sub" style="margin-top:10px">Sync → <span class="mono">SesionRealizada</span> y publicar la semana en el reloj. Sin LLM.</div>
       </div>

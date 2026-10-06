@@ -93,7 +93,7 @@
 
       <div id="header">
         <h1>PB_coach <span>· el agente por dentro</span></h1>
-        <p>Diseño propuesto. Garmin entra y sale <b>solo por código determinista</b> (MCP); el LLM trabaja con datos ya validados y agregados.</p>
+        <p>Implementado (publicar en el reloj, pendiente). Garmin entra y sale <b>solo por código determinista</b> (MCP); el LLM trabaja con datos ya validados y agregados.</p>
       </div>
 
       <svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
@@ -165,10 +165,10 @@
         <div class="tag">agent/ · bucle de tool use</div>
         <h2>Claude Opus 5.5<span class="mono">claude-opus-5-5</span></h2>
         <div class="kv">
-          <div><span class="k">SDK</span><span class="v"><span class="mono">anthropic</span> · Tool Runner, máx. N iteraciones</span></div>
+          <div><span class="k">SDK</span><span class="v"><span class="mono">anthropic</span> · bucle manual, máx. 20 iteraciones</span></div>
           <div><span class="k">thinking · effort</span><span class="v mono">adaptive · high</span></div>
           <div><span class="k">tools</span><span class="v"><span class="mono">tool_choice: auto</span> · <span class="mono">strict: true</span></span></div>
-          <div><span class="k">formato de salida</span><span class="v"><span class="mono">output_config.format</span> → ResultadoAgente</span></div>
+          <div><span class="k">entrega</span><span class="v">tool <span class="mono">entregar_resultado</span> → ResultadoAgente</span></div>
           <div><span class="k">si el modelo rechaza</span><span class="v"><span class="mono">fallbacks: "default"</span></span></div>
         </div>
         <div class="rules">
@@ -190,15 +190,14 @@
         <div class="code" style="line-height:1.5">
           <div><span class="f">estado</span>: <span class="s">"plan_valido"</span> | <span class="s">"sin_solucion"</span></div>
           <div><span class="f">plan</span>: <span class="t">Plan</span>  <span class="c"># versión n+1, en sus 3 niveles</span></div>
-          <div><span class="f">accion</span>: {<span class="f">tipo</span>: <span class="s">"progresar"</span>, <span class="f">regla_id</span>}  <span class="c"># reglas_ajuste</span></div>
-          <div><span class="f">justificaciones</span>: [ {<span class="f">decision</span>, <span class="f">regla_ids</span>} ]</div>
+          <div><span class="f">justificaciones</span>: [ {<span class="f">decision</span>, <span class="f">regla_ids</span>} ]  <span class="c"># incluye la regla de ajuste</span></div>
           <div><span class="f">violaciones</span>: [...]  ·  <span class="f">resumen</span>: <span class="t">str</span></div>
         </div>
       </div>
 
       <div class="box" style="--c:#2dd4bf; left:1110px; top:450px; width:750px; height:130px">
-        <div class="tag">Guardia final · código, no LLM</div>
-        <div class="sub" style="color:#c9d1d9; margin-top:8px">Re-ejecuta <span class="mono">validator.py</span> sobre el plan y comprueba que cada <span class="mono">regla_id</span> exista en el perfil.</div>
+        <div class="tag">Guardia final · en entregar_resultado · código, no LLM</div>
+        <div class="sub" style="color:#c9d1d9; margin-top:8px">Re-valida el plan, exige que cada <span class="mono">regla_id</span> exista, que se aplique la acción del motor y que las semanas pasadas no cambien.</div>
         <div class="sub"><span style="color:#3fb950; font-weight:600">✓ pasa</span> → guarda la versión en Postgres y publica (paso 5) · <span style="color:#f85149; font-weight:600">✗ falla</span> → se reintenta</div>
       </div>
 
@@ -207,7 +206,7 @@
 
       <div class="tool" style="--c:#60a5fa; left:490px">
         <div class="name">resumen_historial</div>
-        <div class="what">Semanas realizadas, ya agregadas. Nunca sesiones crudas.</div>
+        <div class="what">Semanas cerradas, ya agregadas. Nunca sesiones crudas.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">n_semanas</span></div>
         <div class="io"><span class="dim">devuelve</span><span class="mono">volumen, carga, D+ / semana</span></div>
         <div class="chip">ahorra tokens</div>
@@ -237,7 +236,7 @@
         <div class="what">Adherencia + progreso, y qué acción toca según las reglas de ajuste.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">semana cerrada</span></div>
         <div class="io"><span class="dim">devuelve</span><span class="mono">métricas, acción, regla_id</span></div>
-        <div class="chip">solo ajuste semanal</div>
+        <div class="chip">calculada antes del bucle</div>
         <div class="impl">implementa <span class="mono">engine/deviation.py</span></div>
       </div>
 

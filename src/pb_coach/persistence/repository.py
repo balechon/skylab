@@ -158,3 +158,18 @@ def registrar_ejecucion(
     db.add(fila)
     db.flush()
     return fila.id
+
+
+def perfil_del_plan(db: Session, plan_id: int) -> str:
+    """Nombre del perfil de metodología con el que se creó el plan."""
+    perfil = db.scalar(select(PlanFila.perfil).where(PlanFila.id == plan_id))
+    if perfil is None:
+        raise ValueError(f"No existe el plan {plan_id}")
+    return perfil
+
+
+def id_version(db: Session, plan_id: int, version: int) -> int:
+    """Id de la fila de una versión concreta (para enlazar la ejecución)."""
+    return db.scalar(
+        select(PlanVersionFila.id).where(PlanVersionFila.plan_id == plan_id, PlanVersionFila.version == version)
+    )
