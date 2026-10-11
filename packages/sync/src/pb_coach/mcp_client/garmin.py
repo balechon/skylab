@@ -117,9 +117,15 @@ class ClienteGarmin:
 
     async def __aenter__(self) -> "ClienteGarmin":
         self._pila = AsyncExitStack()
-        lectura, escritura = await self._pila.enter_async_context(streamable_http_client(self.url))
-        self._sesion = await self._pila.enter_async_context(ClientSession(lectura, escritura))
-        await self._sesion.initialize()
+        try:
+            lectura, escritura = await self._pila.enter_async_context(streamable_http_client(self.url))
+            self._sesion = await self._pila.enter_async_context(ClientSession(lectura, escritura))
+            await self._sesion.initialize()
+        except BaseException:
+            # Si garmin-mcp no responde, se cierra aquí lo que se llegó a abrir
+            # (en la misma tarea) en vez de dejar la conexión a medias.
+            await self._pila.aclose()
+            raise
         return self
 
     async def __aexit__(self, *exc) -> None:

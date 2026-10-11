@@ -1,20 +1,16 @@
-[project]
-name = "pb-coach"
-version = "0.1.0"
-description = "Agente de planificación de entrenamiento que aplica metodología explícita y justifica cada decisión."
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-    "alembic>=1.13",
-    "anthropic>=1",
-    "fastapi>=0.115",
-    "mcp>=1.9",
-    "psycopg[binary]>=3",
-    "pydantic>=2",
-    "pyyaml>=6",
-    "sqlalchemy>=2",
-    "uvicorn>=0.30",
-]
+# Workspace de uv (raíz virtual, sin paquete propio). Cada paquete declara
+# solo sus dependencias y cada imagen Docker instala solo el suyo:
+#
+#   packages/core         pb-coach-core         domain + engine
+#   packages/persistence  pb-coach-persistence  Postgres + migraciones
+#   packages/sync         pb-coach-sync         sync de Garmin (único con MCP)
+#   packages/api          pb-coach-api          API + agente LLM
+#
+#   uv sync --all-packages     # entorno de desarrollo con todo
+#   uv run pytest
+
+[tool.uv.workspace]
+members = ["packages/*"]
 
 [dependency-groups]
 dev = [
@@ -22,9 +18,5 @@ dev = [
     "pytest>=8",
 ]
 
-[build-system]
-requires = ["setuptools>=68"]
-build-backend = "setuptools.build_meta"
-
-[tool.setuptools.packages.find]
-where = ["src"]
+[tool.pytest.ini_options]
+testpaths = ["tests"]

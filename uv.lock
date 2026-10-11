@@ -6,6 +6,20 @@ resolution-markers = [
     "python_full_version < '3.14'",
 ]
 
+[manifest]
+members = [
+    "pb-coach-api",
+    "pb-coach-core",
+    "pb-coach-persistence",
+    "pb-coach-sync",
+]
+
+[manifest.dependency-groups]
+dev = [
+    { name = "httpx2", specifier = ">=2.13" },
+    { name = "pytest", specifier = ">=8" },
+]
+
 [[package]]
 name = "alembic"
 version = "1.20.0"
@@ -643,44 +657,79 @@ wheels = [
 ]
 
 [[package]]
-name = "pb-coach"
+name = "pb-coach-api"
 version = "0.1.0"
-source = { editable = "." }
+source = { editable = "packages/api" }
 dependencies = [
-    { name = "alembic" },
     { name = "anthropic" },
     { name = "fastapi" },
-    { name = "mcp" },
-    { name = "psycopg", extra = ["binary"] },
-    { name = "pydantic" },
-    { name = "pyyaml" },
-    { name = "sqlalchemy" },
+    { name = "pb-coach-core" },
+    { name = "pb-coach-persistence" },
     { name = "uvicorn" },
 ]
 
-[package.dev-dependencies]
-dev = [
-    { name = "httpx2" },
-    { name = "pytest" },
+[package.metadata]
+requires-dist = [
+    { name = "anthropic", specifier = ">=1" },
+    { name = "fastapi", specifier = ">=0.115" },
+    { name = "pb-coach-core", editable = "packages/core" },
+    { name = "pb-coach-persistence", editable = "packages/persistence" },
+    { name = "uvicorn", specifier = ">=0.30" },
+]
+
+[[package]]
+name = "pb-coach-core"
+version = "0.1.0"
+source = { editable = "packages/core" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "pyyaml" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2" },
+    { name = "pyyaml", specifier = ">=6" },
+]
+
+[[package]]
+name = "pb-coach-persistence"
+version = "0.1.0"
+source = { editable = "packages/persistence" }
+dependencies = [
+    { name = "alembic" },
+    { name = "pb-coach-core" },
+    { name = "psycopg", extra = ["binary"] },
+    { name = "sqlalchemy" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
-    { name = "anthropic", specifier = ">=1" },
-    { name = "fastapi", specifier = ">=0.115" },
-    { name = "mcp", specifier = ">=1.9" },
+    { name = "pb-coach-core", editable = "packages/core" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3" },
-    { name = "pydantic", specifier = ">=2" },
-    { name = "pyyaml", specifier = ">=6" },
     { name = "sqlalchemy", specifier = ">=2" },
-    { name = "uvicorn", specifier = ">=0.30" },
 ]
 
-[package.metadata.requires-dev]
-dev = [
-    { name = "httpx2", specifier = ">=2.13" },
-    { name = "pytest", specifier = ">=8" },
+[[package]]
+name = "pb-coach-sync"
+version = "0.1.0"
+source = { editable = "packages/sync" }
+dependencies = [
+    { name = "mcp" },
+    { name = "pb-coach-core" },
+    { name = "pb-coach-persistence" },
+    { name = "starlette" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "mcp", specifier = ">=1.9" },
+    { name = "pb-coach-core", editable = "packages/core" },
+    { name = "pb-coach-persistence", editable = "packages/persistence" },
+    { name = "starlette" },
+    { name = "uvicorn", specifier = ">=0.30" },
 ]
 
 [[package]]

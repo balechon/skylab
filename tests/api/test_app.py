@@ -1,10 +1,7 @@
-from datetime import date
-
 import pytest
 from fastapi.testclient import TestClient
 
-from pb_coach.api.app import app, obtener_cliente_llm, obtener_sesiones_db, obtener_sincronizador
-from pb_coach.sync import ResultadoSync
+from pb_coach.api.app import app, obtener_cliente_llm, obtener_sesiones_db
 
 TOKEN = "token-de-prueba"
 CABECERA = {"Authorization": f"Bearer {TOKEN}"}
@@ -15,9 +12,6 @@ def cliente(monkeypatch):
     monkeypatch.setenv("PB_COACH_API_TOKEN", TOKEN)
     app.dependency_overrides[obtener_sesiones_db] = lambda: None
     app.dependency_overrides[obtener_cliente_llm] = lambda: None
-    app.dependency_overrides[obtener_sincronizador] = lambda: (
-        lambda _db: ResultadoSync(desde=date(2026, 10, 1), hasta=date(2026, 10, 6), traidas=3, nuevas=1)
-    )
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -30,28 +24,16 @@ def test_health_no_necesita_token():
 
 def test_sin_token_configurado_la_api_no_opera(cliente, monkeypatch):
     monkeypatch.delenv("PB_COACH_API_TOKEN")
-    assert cliente.post("/sync", headers=CABECERA).status_code == 503
+    assert cliente.post("/semana/ajustar", headers=CABECERA).status_code == 503
 
 
 def test_token_incorrecto_o_ausente(cliente):
-    assert cliente.post("/sync").status_code == 401
-    assert cliente.post("/sync", headers={"Authorization": "Bearer otro"}).status_code == 401
+    assert cliente.post("/semana/ajustar").status_code == 401
+    assert cliente.post("/semana/ajustar", headers={"Authorization": "Bearer otro"}).status_code == 401
 
 
-def test_sync(cliente):
-    respuesta = cliente.post("/sync", headers=CABECERA)
-    assert respuesta.status_code == 200
-    assert respuesta.json()["resultado"]["nuevas"] == 1
-
-
-def test_un_fallo_de_garmin_se_informa_sin_romper(cliente):
-    def falla(_db):
-        raise ConnectionError("garmin-mcp no responde")
-
-    app.dependency_overrides[obtener_sincronizador] = lambda: falla
-    cuerpo = cliente.post("/sync", headers=CABECERA).json()
-    assert cuerpo["ok"] is False
-    assert "garmin-mcp no responde" in cuerpo["error"]
+def test_la_api_ya_no_expone_sync(cliente):
+    assert cliente.post("/sync", headers=CABECERA).status_code == 404
 
 
 def test_plan_con_perfil_inexistente(cliente):

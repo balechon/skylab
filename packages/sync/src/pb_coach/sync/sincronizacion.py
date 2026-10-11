@@ -2,11 +2,8 @@
 #
 # Trae las actividades desde la última fecha guardada (incluida: ese día pudo
 # haber más de una) hasta hoy y las guarda sin duplicar. La primera vez trae
-# las últimas DIAS_INICIALES semanas como línea base.
-#
-#   docker compose exec pb-coach python -m pb_coach.sync
+# los últimos DIAS_INICIALES días como línea base.
 
-import asyncio
 import os
 from datetime import date, timedelta
 from typing import Optional
@@ -16,7 +13,6 @@ from sqlalchemy.orm import sessionmaker
 
 from pb_coach.mcp_client.garmin import ClienteGarmin, traer_sesiones
 from pb_coach.persistence import repository as repo
-from pb_coach.persistence.db import crear_engine, crear_sesiones
 
 DIAS_INICIALES = 56
 
@@ -54,15 +50,7 @@ async def sincronizar(
     return ResultadoSync(desde=desde, hasta=hoy, traidas=len(sesiones), nuevas=nuevas)
 
 
-async def _main() -> None:
-    sesiones_db = crear_sesiones(crear_engine())
+async def sincronizar_ahora(sesiones_db: sessionmaker) -> ResultadoSync:
+    """Abre la sesión MCP con garmin-mcp y sincroniza hasta hoy."""
     async with ClienteGarmin() as cliente:
-        resultado = await sincronizar(sesiones_db, cliente, rpe_desde=rpe_desde_configurado())
-    print(
-        f"Sync {resultado.desde} → {resultado.hasta}: "
-        f"{resultado.traidas} actividades de running, {resultado.nuevas} nuevas."
-    )
-
-
-if __name__ == "__main__":
-    asyncio.run(_main())
+        return await sincronizar(sesiones_db, cliente, rpe_desde=rpe_desde_configurado())

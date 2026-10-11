@@ -5,6 +5,7 @@
 #   3. guarda la versión nueva del plan (si la guardia la aceptó) y el
 #      registro de la ejecución en una sola transacción.
 
+import os
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Optional
@@ -20,7 +21,10 @@ from pb_coach.engine.deviation import EvaluacionSemana, evaluar_semana
 from pb_coach.engine.loader import cargar_perfil
 from pb_coach.persistence import repository as repo
 
-PERFILES_DIR = Path(__file__).parents[3] / "methodology" / "profiles"
+def perfiles_dir() -> Path:
+    """Carpeta de perfiles YAML: PB_COACH_PERFILES_DIR, o methodology/profiles
+    relativa al directorio de trabajo (la raíz del repo, o /app en Docker)."""
+    return Path(os.environ.get("PB_COACH_PERFILES_DIR", "methodology/profiles"))
 SEMANAS_DE_HISTORIAL = 16
 
 
@@ -59,7 +63,7 @@ def crear_ciclo(
         operacion=Operacion.CREAR_CICLO,
         hoy=hoy,
         nombre_perfil=solicitud.perfil,
-        perfil=cargar_perfil(PERFILES_DIR / f"{solicitud.perfil}.yaml"),
+        perfil=cargar_perfil(perfiles_dir() / f"{solicitud.perfil}.yaml"),
         sesiones=_sesiones_recientes(sesiones_db, hoy),
         solicitud=solicitud,
     )
@@ -95,7 +99,7 @@ def ajuste_semanal(sesiones_db: sessionmaker, cliente: Any, hoy: Optional[date] 
         plan_id, plan = vigente
         nombre_perfil = repo.perfil_del_plan(db, plan_id)
 
-    perfil = cargar_perfil(PERFILES_DIR / f"{nombre_perfil}.yaml")
+    perfil = cargar_perfil(perfiles_dir() / f"{nombre_perfil}.yaml")
     sesiones = _sesiones_recientes(sesiones_db, hoy)
     cerrado = _ultimo_microciclo_cerrado(plan, hoy)
     evaluacion = evaluar_semana(cerrado, sesiones, perfil) if cerrado else None

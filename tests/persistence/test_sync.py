@@ -8,7 +8,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import sessionmaker
 
 from pb_coach.persistence import repository as repo
-from pb_coach.sync import DIAS_INICIALES, sincronizar
+from pb_coach.sync.sincronizacion import DIAS_INICIALES, sincronizar
 from tests.mcp_client.test_garmin import ClienteGarminFalso, resumen_garmin
 
 HOY = date(2026, 10, 20)

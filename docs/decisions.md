@@ -367,3 +367,27 @@ cada parte comprobable sin red ni coste.
 no que el plan la aplique correctamente (p. ej. que "repetir_microciclo"
 realmente repita la semana). Verificarlo requiere reglas por acción en el
 motor; queda pendiente.
+
+## 2026-10-11 — Workspace de uv y una imagen por servicio; MCP aislado
+
+**Decisión**: el código pasa a un workspace de uv con cuatro paquetes, cada
+uno con su `pyproject.toml` y solo sus dependencias: `pb-coach-core`
+(domain + engine: pydantic, pyyaml), `pb-coach-persistence` (sqlalchemy,
+alembic, psycopg), `pb-coach-sync` (mcp) y `pb-coach-api` (anthropic,
+fastapi). `pb_coach` es un namespace package compartido, así que los imports
+no cambian. Hay dos imágenes de runtime por proceso: `pb-coach-api` (API +
+agente, sin MCP) y `pb-coach-sync` (sync de Garmin, sin FastAPI ni la clave de
+Anthropic), más una de tests con todo. La API ya no sincroniza: n8n llama
+primero a `pb-coach-sync /sync` y después a `pb-coach-api`.
+
+**Por qué**: el SDK de MCP es la dependencia más pesada y comparte base
+(starlette) con FastAPI; separarlas evita que un conflicto de versiones o un
+fallo de Garmin tumbe la planificación, y aísla los errores de cada parte.
+Separar paquetes además hace cumplir los límites entre capas (core no puede
+importar SQLAlchemy porque no lo tiene). No se hizo una imagen por directorio:
+domain y engine son librerías que usan todos, y partir el agente del motor
+obligaría a cada validación a pasar por HTTP.
+
+**Nota**: el workspace comparte un único `uv.lock` (las versiones se
+resuelven juntas); lo que cambia es qué se instala en cada imagen
+(`uv sync --package`).

@@ -33,11 +33,11 @@ El sistema es un motor híbrido:
 ## Flujo
 
 ```
+n8n ── POST pb-coach-sync /sync ──▶ garmin-mcp ──▶ Garmin → Postgres
 n8n ── cron semanal ──▶ POST /semana/ajustar ─┐
     └─ manual ────────▶ POST /plan ───────────┤
                                               ▼
-                        pb-coach (Docker): API mínima
-                          ├─ sync / publicar ◀──▶ garmin-mcp ◀──▶ Garmin
+                        pb-coach-api: API mínima
                           ├─ agente LLM (propone)
                           ├─ motor determinista (decide)
                           ├─ perfiles YAML (metodología)
@@ -49,19 +49,18 @@ n8n ◀── resultado ── Telegram
 
 ## Estructura del proyecto
 
+Workspace de uv con cuatro paquetes; `pb_coach` es un namespace compartido:
+
 ```
-methodology/    Perfiles de metodología (YAML), uno por autor/framework
-src/pb_coach/
-  domain/       Modelos de datos puros (Sesión, Mesociclo, Plan, ...)
-  engine/       Motor determinista: loader, calculator, validator, deviation
-  agent/        Capa LLM: bucle (agente), tools, guardia final y servicio
-  mcp_client/   Cliente MCP de garmin-mcp (sync de actividades, publicar semana)
-  persistence/  Postgres: modelos SQLAlchemy y repositorio
-  api/          API HTTP mínima (FastAPI)
-  integrations/n8n/  Contrato de los webhooks que n8n dispara
-migrations/     Migraciones de Alembic (se aplican al arrancar pb-coach)
-tests/          Tests, principalmente del motor determinista
-docs/           Visión, decisiones y diagramas (fuente HTML en docs/*/)
+packages/
+  core/         pb-coach-core         domain/ (modelos) + engine/ (motor determinista)
+  persistence/  pb-coach-persistence  persistence/ + migraciones Alembic
+  sync/         pb-coach-sync         mcp_client/ + sync/ (Garmin → Postgres, único con MCP)
+  api/          pb-coach-api          agent/ (LLM) + api/ (FastAPI)
+methodology/    Perfiles de metodología (YAML)
+tests/          Tests de todo el workspace
+docs/           Visión, decisiones, contrato de n8n y diagramas
+docker/         Inicialización de Postgres
 ```
 
 ## Estado actual
@@ -76,7 +75,8 @@ docs/           Visión, decisiones y diagramas (fuente HTML en docs/*/)
   migraciones Alembic en `migrations/`).
 - Hecho también: sync de Garmin (`pb_coach.sync`) y agente LLM (`agent/`:
   bucle de tool use con Claude, guardia final y servicio que persiste),
-  expuesto en la API (`POST /plan`, `POST /semana/ajustar`, `POST /sync`).
+  expuesto en la API (`POST /plan`, `POST /semana/ajustar`); el sync es un
+  servicio aparte (`pb-coach-sync`, `POST /sync`).
 - Siguiente: publicar la semana en el reloj, workflows de n8n y transcribir
   el primer perfil real.
 
@@ -86,21 +86,24 @@ Entorno y dependencias con [uv](https://docs.astral.sh/uv/) (Python 3.12,
 fijado en `.python-version`; versiones exactas en `uv.lock`):
 
 ```bash
-uv sync            # crea .venv e instala dependencias + grupo dev
-uv run pytest      # tests (los de Postgres se saltan sin TEST_DATABASE_URL)
-uv add <paquete>   # nueva dependencia (actualiza pyproject.toml y uv.lock)
+uv sync --all-packages   # .venv con los cuatro paquetes + grupo dev
+uv run pytest            # tests (los de Postgres se saltan sin TEST_DATABASE_URL)
+uv add --package pb-coach-api <paquete>   # dependencia para un paquete concreto
 ```
 
 ## Docker
 
+Una imagen por servicio, cada una con solo su paquete:
+
 ```bash
-docker compose up -d --build                    # pb-coach en 127.0.0.1:8000 (/health)
+docker compose up -d --build                    # postgres + n8n + pb-coach-api
+docker compose --profile garmin up -d --build   # + pb-coach-sync + garmin-mcp
 docker compose run --rm --build test            # todos los tests, incluidos los de Postgres
-docker compose --profile garmin up -d --build   # + garmin-mcp
+docker compose exec pb-coach-sync python -m pb_coach.sync   # sync manual
 ```
 
 `garmin-mcp` necesita tus credenciales de Garmin en `secrets/` (ignorado por
-git) y un primer login interactivo para el código MFA:
+git) y un primer login interactivo:
 
 ```bash
 mkdir -p secrets

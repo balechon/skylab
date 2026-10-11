@@ -169,7 +169,7 @@
 
       <!-- ===== docker service ===== -->
       <div id="docker">
-        <div class="label"><span class="dot todo" style="border-color:#2496ed"></span>Docker · pb-coach y postgres (red interna)</div>
+        <div class="label"><span class="dot todo" style="border-color:#2496ed"></span>Docker · red interna (pb-coach-api, pb-coach-sync, postgres)</div>
       </div>
 
       <div class="box" style="--c:#f0883e; left:500px; top:230px; width:570px; height:110px">
@@ -236,13 +236,13 @@
         <div class="pill">1 perfil activo por plan</div>
       </div>
 
-      <div class="box" style="--c:#f472b6; left:1130px; top:790px; width:280px; height:200px">
-        <div class="tag">mcp_client/</div>
-        <h2>Cliente MCP</h2>
+      <div class="box" style="--c:#f472b6; left:1130px; top:790px; width:280px; height:200px; border-style:dashed">
+        <div class="tag">imagen aparte · pb-coach-sync</div>
+        <h2>Sync (MCP)</h2>
         <div class="items">
           <div class="item"><span class="dot part"></span><span class="mono">garmin.py</span><span class="note">sync ✓ · publicar</span></div>
         </div>
-        <div class="sub" style="margin-top:10px">Sync → <span class="mono">SesionRealizada</span> y publicar la semana en el reloj. Sin LLM.</div>
+        <div class="sub" style="margin-top:10px">Única imagen con MCP. Si cae, la API sigue con lo guardado.</div>
       </div>
 
       <!-- ===== column 3: external services ===== -->

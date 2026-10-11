@@ -1,11 +1,15 @@
-# Stack de PB_coach: postgres + n8n (orquestador) + pb-coach (API) +
-# garmin-mcp. Sin superficie pública: solo n8n publica un puerto, y
-# únicamente en 127.0.0.1 del host; al editor se entra con un túnel SSH
-# (ssh -L 5678:localhost:5678 usuario@vps). postgres, pb-coach y garmin-mcp
-# solo son accesibles dentro de la red de Docker. Ver docs/decisions.md.
+# Stack de PB_coach: postgres + n8n (orquestador) + pb-coach-api (API y
+# agente) + pb-coach-sync y garmin-mcp (sync de Garmin). Sin superficie
+# pública: solo n8n publica un puerto, y únicamente en 127.0.0.1 del host; al
+# editor se entra con un túnel SSH (ssh -L 5678:localhost:5678 usuario@vps).
+# El resto solo es accesible dentro de la red de Docker. Ver docs/decisions.md.
 #
-#   docker compose up -d --build                   # n8n + pb-coach
-#   docker compose --profile garmin up -d --build  # + garmin-mcp
+# n8n orquesta: primero POST pb-coach-sync:8000/sync, después
+# POST pb-coach-api:8000/semana/ajustar. Si Garmin falla, la API sigue
+# funcionando con los datos ya guardados.
+#
+#   docker compose up -d --build                   # postgres + n8n + api
+#   docker compose --profile garmin up -d --build  # + pb-coach-sync + garmin-mcp
 #   docker compose run --rm --build test           # tests en el contenedor
 #
 # Requiere un .env con N8N_ENCRYPTION_KEY y las contraseñas de Postgres
@@ -59,14 +63,15 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      pb-coach:
+      pb-coach-api:
         condition: service_healthy
     restart: unless-stopped
 
-  pb-coach:
+  # API + agente LLM. Sin MCP instalado. Aplica las migraciones al arrancar.
+  pb-coach-api:
     build:
       context: .
-      target: runtime
+      target: api
     # Solo las variables que necesita: nunca el .env completo (que incluye
     # las contraseñas del superusuario de Postgres y de n8n).
     environment:
@@ -74,10 +79,28 @@ services:
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
       PB_COACH_API_TOKEN: ${PB_COACH_API_TOKEN:-}
       DATABASE_URL: postgresql+psycopg://pb_coach:${PB_COACH_DB_PASSWORD}@postgres:5432/pb_coach
-      GARMIN_MCP_URL: http://garmin-mcp:8000/mcp
     depends_on:
       postgres:
         condition: service_healthy
+    restart: unless-stopped
+
+  # Sync de Garmin → Postgres. Único servicio con el SDK de MCP; no tiene la
+  # clave de Anthropic. Espera a que la API haya aplicado las migraciones.
+  pb-coach-sync:
+    build:
+      context: .
+      target: sync
+    profiles: ["garmin"]
+    environment:
+      TZ: ${TZ:-America/Guayaquil}
+      PB_COACH_API_TOKEN: ${PB_COACH_API_TOKEN:-}
+      DATABASE_URL: postgresql+psycopg://pb_coach:${PB_COACH_DB_PASSWORD}@postgres:5432/pb_coach
+      GARMIN_MCP_URL: http://garmin-mcp:8000/mcp
+    depends_on:
+      pb-coach-api:
+        condition: service_healthy
+      garmin-mcp:
+        condition: service_started
     restart: unless-stopped
 
   # Tests (incluidos los de persistencia, en un esquema temporal de la base
