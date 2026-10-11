@@ -6,8 +6,8 @@ from datetime import date
 import pytest
 from starlette.testclient import TestClient
 
-from pb_coach.sync.app import crear_app
-from pb_coach.sync.sincronizacion import ResultadoSync
+from sync.app import crear_app
+from sync.sincronizacion import ResultadoSync
 
 TOKEN = "token-de-prueba"
 CABECERA = {"Authorization": f"Bearer {TOKEN}"}

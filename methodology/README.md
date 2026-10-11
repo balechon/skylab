@@ -2,7 +2,7 @@
 
 Un **perfil** es la transcripción manual de la metodología de un autor o
 framework de entrenamiento a un YAML estructurado que el motor determinista
-(`src/pb_coach/engine/`) puede cargar, validar y citar.
+(`core/`) puede cargar, validar y citar.
 
 Solo un perfil está activo por plan. No se combinan reglas de distintos
 autores dentro de un mismo plan — evita conflictos entre metodologías
@@ -38,5 +38,5 @@ decisión no debería estar en el plan.
 
 1. Copia `profiles/_template.yaml` a `profiles/<autor>.yaml`.
 2. Rellena los campos con las reglas reales de la fuente, cada una con su ID.
-3. No hay validación automática todavía — se añadirá en `engine/loader.py`
-   cuando se implemente el motor.
+3. Valida que carga: `uv run pytest tests/core/test_loader.py` prueba
+   automáticamente todos los perfiles de `profiles/` (`core/loader.py`).

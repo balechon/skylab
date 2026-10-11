@@ -49,14 +49,15 @@ n8n ◀── resultado ── Telegram
 
 ## Estructura del proyecto
 
-Workspace de uv con cuatro paquetes; `pb_coach` es un namespace compartido:
+Workspace de uv: cada carpeta es un paquete con su `pyproject.toml` y sus
+scripts directamente dentro (`from core.training import Plan`).
 
 ```
-packages/
-  core/         pb-coach-core         domain/ (modelos) + engine/ (motor determinista)
-  persistence/  pb-coach-persistence  persistence/ + migraciones Alembic
-  sync/         pb-coach-sync         mcp_client/ + sync/ (Garmin → Postgres, único con MCP)
-  api/          pb-coach-api          agent/ (LLM) + api/ (FastAPI)
+core/           pb-coach-core         modelos (training, methodology) y motor determinista
+                                      (loader, calculator, validator, deviation). Sin IO.
+persistence/    pb-coach-persistence  Postgres: modelos, repositorio y migraciones Alembic
+sync/           pb-coach-sync         sync Garmin → Postgres vía MCP (garmin.py, app.py)
+agent/          pb-coach-agent        agente LLM (bucle, tools, guardia, servicio) + api.py
 methodology/    Perfiles de metodología (YAML)
 tests/          Tests de todo el workspace
 docs/           Visión, decisiones, contrato de n8n y diagramas
@@ -69,11 +70,11 @@ docker/         Inicialización de Postgres
   competición, tres niveles de detalle, sesión planificada vs. realizada,
   reglas de ajuste), loader de perfiles, perfil didáctico, API con `/health`
   y stack Docker (n8n + pb-coach + garmin-mcp), todo con tests.
-- Hecho también: motor determinista completo (`engine/calculator.py`,
+- Hecho también: motor determinista completo (`core/calculator.py`,
   `validator.py`, `deviation.py`) y Postgres en el stack (n8n ya lo usa).
 - Hecho también: persistencia en Postgres (`persistence/`, SQLAlchemy +
-  migraciones Alembic en `migrations/`).
-- Hecho también: sync de Garmin (`pb_coach.sync`) y agente LLM (`agent/`:
+  migraciones Alembic en `persistence/migrations/`).
+- Hecho también: sync de Garmin (`sync/`) y agente LLM (`agent/`:
   bucle de tool use con Claude, guardia final y servicio que persiste),
   expuesto en la API (`POST /plan`, `POST /semana/ajustar`); el sync es un
   servicio aparte (`pb-coach-sync`, `POST /sync`).
@@ -88,7 +89,7 @@ fijado en `.python-version`; versiones exactas en `uv.lock`):
 ```bash
 uv sync --all-packages   # .venv con los cuatro paquetes + grupo dev
 uv run pytest            # tests (los de Postgres se saltan sin TEST_DATABASE_URL)
-uv add --package pb-coach-api <paquete>   # dependencia para un paquete concreto
+uv add --package pb-coach-agent <paquete>   # dependencia para un paquete concreto
 ```
 
 ## Docker
@@ -99,7 +100,7 @@ Una imagen por servicio, cada una con solo su paquete:
 docker compose up -d --build                    # postgres + n8n + pb-coach-api
 docker compose --profile garmin up -d --build   # + pb-coach-sync + garmin-mcp
 docker compose run --rm --build test            # todos los tests, incluidos los de Postgres
-docker compose exec pb-coach-sync python -m pb_coach.sync   # sync manual
+docker compose exec pb-coach-sync python -m sync   # sync manual
 ```
 
 `garmin-mcp` necesita tus credenciales de Garmin en `secrets/` (ignorado por

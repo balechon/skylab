@@ -4,8 +4,8 @@
 import json
 from types import SimpleNamespace
 
-from pb_coach.agent.agente import MAX_RECORDATORIOS, MODELO, ejecutar_agente
-from pb_coach.agent.herramientas import Herramientas
+from agent.agente import MAX_RECORDATORIOS, MODELO, ejecutar_agente
+from agent.herramientas import Herramientas
 from tests.agent.planes import contexto_ciclo, plan_valido, resultado_valido
 
 

@@ -116,7 +116,7 @@ n8n ◀── resultado ── Telegram
 - `pb-coach` y `garmin-mcp` no se exponen a internet; solo n8n llama a
   `pb-coach`, con un token compartido.
 - Garmin entra y sale solo por código determinista; el LLM trabaja con datos
-  ya validados por `domain/` y agregados por `calculator.py`.
+  ya validados por `core/` (Pydantic) y agregados por `calculator.py`.
 
 ## Decisiones tomadas
 

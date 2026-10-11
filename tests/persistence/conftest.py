@@ -15,7 +15,7 @@ from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 
 URL = os.environ.get("TEST_DATABASE_URL")
-ALEMBIC_INI = Path(__file__).parents[2] / "packages" / "persistence" / "alembic.ini"
+ALEMBIC_INI = Path(__file__).parents[2] / "persistence" / "alembic.ini"
 
 
 @pytest.fixture(scope="session")

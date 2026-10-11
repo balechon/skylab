@@ -1,16 +1,17 @@
-# Workspace de uv (raíz virtual, sin paquete propio). Cada paquete declara
-# solo sus dependencias y cada imagen Docker instala solo el suyo:
+# Workspace de uv (raíz virtual, sin paquete propio). Cada carpeta es un
+# paquete con su pyproject.toml y solo sus dependencias; cada imagen Docker
+# instala solo el suyo:
 #
-#   packages/core         pb-coach-core         domain + engine
-#   packages/persistence  pb-coach-persistence  Postgres + migraciones
-#   packages/sync         pb-coach-sync         sync de Garmin (único con MCP)
-#   packages/api          pb-coach-api          API + agente LLM
+#   core/         pb-coach-core         modelos y motor determinista (sin IO)
+#   persistence/  pb-coach-persistence  Postgres + migraciones
+#   sync/         pb-coach-sync         sync de Garmin (único con MCP)
+#   agent/        pb-coach-agent        agente LLM + API
 #
 #   uv sync --all-packages     # entorno de desarrollo con todo
 #   uv run pytest
 
 [tool.uv.workspace]
-members = ["packages/*"]
+members = ["core", "persistence", "sync", "agent"]
 
 [dependency-groups]
 dev = [

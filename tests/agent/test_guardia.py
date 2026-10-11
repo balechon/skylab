@@ -1,13 +1,13 @@
 from datetime import timedelta
 
-from pb_coach.agent.contexto import ContextoAgente
-from pb_coach.agent.guardia import revisar_resultado
-from pb_coach.agent.resultado import EstadoResultado, Operacion, ResultadoAgente
-from pb_coach.domain.methodology import AccionAjuste, MetricaAjuste
-from pb_coach.domain.training import ModoPlan
-from pb_coach.engine.calculator import resumir_periodo
-from pb_coach.engine.deviation import EvaluacionSemana, ReglaActivada
-from pb_coach.engine.validator import Violacion
+from agent.contexto import ContextoAgente
+from agent.guardia import revisar_resultado
+from agent.resultado import EstadoResultado, Operacion, ResultadoAgente
+from core.methodology import AccionAjuste, MetricaAjuste
+from core.training import ModoPlan
+from core.calculator import resumir_periodo
+from core.deviation import EvaluacionSemana, ReglaActivada
+from core.validator import Violacion
 from tests.agent.planes import HOY, PERFIL, contexto_ciclo, plan_valido, resultado_valido
 
 

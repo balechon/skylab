@@ -3,12 +3,12 @@
 # fuente (libro, paper, apuntes). Ver methodology/README.md para la
 # convención de IDs de regla.
 #
-# Este archivo refleja el modelo tipado en src/pb_coach/domain/methodology.py
+# Este archivo refleja el modelo tipado en core/methodology.py
 # (PerfilMetodologia). Los valores de clase_sesion, tipo_sesion y
 # objetivo_mesociclo deben coincidir EXACTAMENTE con los strings de los
-# Enums definidos en src/pb_coach/domain/training.py (ClaseSesion,
-# TipoSesion, ObjetivoMesociclo) — el loader (Etapa 2) los va a validar
-# contra esos Enums, no acepta cualquier texto.
+# Enums definidos en core/training.py (ClaseSesion, TipoSesion,
+# ObjetivoMesociclo) — core/loader.py los valida contra esos Enums, no
+# acepta cualquier texto.
 
 autor: "NOMBRE_AUTOR"           # ej. "Lydiard"
 fuente: ""                       # referencia bibliográfica de dónde sale esto

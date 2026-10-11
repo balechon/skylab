@@ -391,3 +391,17 @@ obligaría a cada validación a pasar por HTTP.
 **Nota**: el workspace comparte un único `uv.lock` (las versiones se
 resuelven juntas); lo que cambia es qué se instala en cada imagen
 (`uv sync --package`).
+
+## 2026-10-11 — Estructura plana: cada carpeta es un paquete
+
+**Decisión**: se quitan los niveles `packages/` y `src/pb_coach/`. Cada
+paquete del workspace es una carpeta en la raíz con su `pyproject.toml` y sus
+scripts directamente dentro, y se importa por su nombre: `core` (antes
+domain + engine, aplanados), `persistence`, `sync` (cliente MCP de Garmin +
+servicio de sync) y `agent` (agente + `api.py`; paquete `pb-coach-agent`).
+Las imágenes copian solo sus carpetas e instalan el código no editable en
+`/src/.venv`, corriendo desde `/app`: en la imagen de la API no se puede
+importar `sync`, ni `agent` en la del sync.
+
+**Por qué**: menos niveles de carpetas y nombres más directos, sin perder la
+separación de dependencias ni de imágenes de la decisión anterior.

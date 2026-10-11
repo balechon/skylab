@@ -13,7 +13,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from pydantic import ValidationError
 
-from pb_coach.domain.training import (
+from core.training import (
     ClaseSesion,
     Mesociclo,
     Microciclo,
@@ -27,8 +27,8 @@ from pb_coach.domain.training import (
     TipoSesion,
     ZonasFC,
 )
-from pb_coach.persistence import repository as repo
-from pb_coach.persistence.models import Base, PlanVersionFila
+from persistence import repository as repo
+from persistence.models import Base, PlanVersionFila
 
 def _sesion(dia: int, garmin_id=None, **campos) -> SesionRealizada:
     return SesionRealizada(

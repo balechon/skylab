@@ -6,9 +6,9 @@ import pytest
 from sqlalchemy import select, text
 from sqlalchemy.orm import sessionmaker
 
-from pb_coach.agent import servicio
-from pb_coach.persistence import repository as repo
-from pb_coach.persistence.models import EjecucionAgenteFila
+from agent import servicio
+from persistence import repository as repo
+from persistence.models import EjecucionAgenteFila
 from tests.agent.planes import HOY, contexto_ciclo, plan_valido, resultado_valido
 from tests.agent.test_agente import ClienteFalso, _respuesta, _tool
 

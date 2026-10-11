@@ -8,7 +8,7 @@ resolution-markers = [
 
 [manifest]
 members = [
-    "pb-coach-api",
+    "pb-coach-agent",
     "pb-coach-core",
     "pb-coach-persistence",
     "pb-coach-sync",
@@ -657,9 +657,9 @@ wheels = [
 ]
 
 [[package]]
-name = "pb-coach-api"
+name = "pb-coach-agent"
 version = "0.1.0"
-source = { editable = "packages/api" }
+source = { editable = "agent" }
 dependencies = [
     { name = "anthropic" },
     { name = "fastapi" },
@@ -672,15 +672,15 @@ dependencies = [
 requires-dist = [
     { name = "anthropic", specifier = ">=1" },
     { name = "fastapi", specifier = ">=0.115" },
-    { name = "pb-coach-core", editable = "packages/core" },
-    { name = "pb-coach-persistence", editable = "packages/persistence" },
+    { name = "pb-coach-core", editable = "core" },
+    { name = "pb-coach-persistence", editable = "persistence" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]
 
 [[package]]
 name = "pb-coach-core"
 version = "0.1.0"
-source = { editable = "packages/core" }
+source = { editable = "core" }
 dependencies = [
     { name = "pydantic" },
     { name = "pyyaml" },
@@ -695,7 +695,7 @@ requires-dist = [
 [[package]]
 name = "pb-coach-persistence"
 version = "0.1.0"
-source = { editable = "packages/persistence" }
+source = { editable = "persistence" }
 dependencies = [
     { name = "alembic" },
     { name = "pb-coach-core" },
@@ -706,7 +706,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "alembic", specifier = ">=1.13" },
-    { name = "pb-coach-core", editable = "packages/core" },
+    { name = "pb-coach-core", editable = "core" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3" },
     { name = "sqlalchemy", specifier = ">=2" },
 ]
@@ -714,7 +714,7 @@ requires-dist = [
 [[package]]
 name = "pb-coach-sync"
 version = "0.1.0"
-source = { editable = "packages/sync" }
+source = { editable = "sync" }
 dependencies = [
     { name = "mcp" },
     { name = "pb-coach-core" },
@@ -726,8 +726,8 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "mcp", specifier = ">=1.9" },
-    { name = "pb-coach-core", editable = "packages/core" },
-    { name = "pb-coach-persistence", editable = "packages/persistence" },
+    { name = "pb-coach-core", editable = "core" },
+    { name = "pb-coach-persistence", editable = "persistence" },
     { name = "starlette" },
     { name = "uvicorn", specifier = ">=0.30" },
 ]

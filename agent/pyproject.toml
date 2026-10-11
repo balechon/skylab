@@ -1,0 +1,25 @@
+[project]
+name = "pb-coach-agent"
+version = "0.1.0"
+description = "Agente LLM y API de PB_coach. No depende de MCP."
+requires-python = ">=3.12"
+dependencies = [
+    "pb-coach-core",
+    "pb-coach-persistence",
+    "anthropic>=1",
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
+]
+
+[tool.uv.sources]
+pb-coach-core = { workspace = true }
+pb-coach-persistence = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# La carpeta es el paquete: `agent/` se importa como `agent`.
+[tool.setuptools]
+packages = ["agent"]
+package-dir = { "agent" = "." }

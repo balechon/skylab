@@ -5,9 +5,9 @@
 from datetime import date, timedelta
 from pathlib import Path
 
-from pb_coach.agent.contexto import ContextoAgente, SolicitudCiclo
-from pb_coach.agent.resultado import EstadoResultado, Justificacion, Operacion, ResultadoAgente
-from pb_coach.domain.training import (
+from agent.contexto import ContextoAgente, SolicitudCiclo
+from agent.resultado import EstadoResultado, Justificacion, Operacion, ResultadoAgente
+from core.training import (
     ClaseSesion,
     Mesociclo,
     Microciclo,
@@ -21,7 +21,7 @@ from pb_coach.domain.training import (
     TipoSesion,
     ZonasFC,
 )
-from pb_coach.engine.loader import cargar_perfil
+from core.loader import cargar_perfil
 
 HOY = date(2026, 10, 12)
 FIN = date(2026, 12, 31)
