@@ -59,3 +59,17 @@ curl -X POST -H "$H" -H "Content-Type: application/json" \
   localhost:8000/plan
 curl -X POST -H "$H" localhost:8001/publicar
 ```
+
+## Nota para Windows (Git Bash)
+
+`curl -d '{"modo": "Construcción", ...}'` puede enviar la "ó" en una
+codificación que no es UTF-8 y la API responde `400 There was an error
+parsing the body`. Guarda el JSON en un archivo UTF-8 y envíalo con
+`--data-binary`:
+
+```bash
+curl -X POST -H "$H" -H "Content-Type: application/json; charset=utf-8" \
+  --data-binary @solicitud.json localhost:8000/plan
+```
+
+En Linux (el VPS) no pasa.
