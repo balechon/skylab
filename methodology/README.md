@@ -40,3 +40,10 @@ decisión no debería estar en el plan.
 2. Rellena los campos con las reglas reales de la fuente, cada una con su ID.
 3. Valida que carga: `uv run pytest tests/core/test_loader.py` prueba
    automáticamente todos los perfiles de `profiles/` (`core/loader.py`).
+
+## Borradores
+
+Un perfil en transcripción vive en `borradores/` (por ejemplo,
+`borradores/uphill_athlete.yaml`). El sistema solo carga `profiles/`, así que
+un borrador incompleto nunca se usa para planificar. Al terminarlo se mueve a
+`profiles/` y los tests lo validan contra el modelo.

@@ -92,3 +92,13 @@ def test_archivo_vacio_lanza_validation_error(tmp_path):
 def test_yaml_mal_formado_lanza_yaml_error(tmp_path):
     with pytest.raises(yaml.YAMLError):
         cargar_perfil(_escribir(tmp_path, "autor: [sin cerrar\n"))
+
+
+BORRADORES_DIR = PERFILES_DIR.parent / "borradores"
+
+
+@pytest.mark.parametrize("ruta", sorted(BORRADORES_DIR.glob("*.yaml")), ids=lambda p: p.name)
+def test_los_borradores_son_yaml_valido(ruta):
+    # Un borrador no tiene que ser un perfil completo (no se carga para
+    # planificar), pero sí YAML que se pueda leer al pasarlo a profiles/.
+    assert isinstance(yaml.safe_load(ruta.read_text(encoding="utf-8")), dict)

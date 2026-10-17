@@ -1,0 +1,186 @@
+# BORRADOR — perfil de Uphill Athlete, en transcripción.
+#
+# Fuente: House, S., Johnston, S. y Jornet, K. "Training for the Uphill
+# Athlete" (Patagonia, 2019). Completa la referencia exacta de tu edición.
+#
+# Vive en methodology/borradores/ a propósito: el sistema solo carga los
+# perfiles de methodology/profiles/, así que este borrador no se puede usar
+# para planificar hasta que esté completo. Cuando lo esté, se mueve a
+# profiles/uphill_athlete.yaml y los tests lo validan.
+#
+# Cómo transcribir:
+#   - Todo el contenido sale del libro. Donde pone ___, escribe lo que dice
+#     el autor, con la página: "(p. 123)".
+#   - Si el libro da un número, va tal cual y la regla es de origen "autor".
+#     Si da una indicación cualitativa ("aumenta poco a poco") y tú la
+#     conviertes en un número, el origen es "propio" y lo dices en la
+#     descripción.
+#   - Borra los bloques de ejemplo que no uses; copia los que necesites más.
+#   - Si una regla del libro no cabe en ninguna sección, NO la fuerces:
+#     escríbela en "fuera_del_modelo" al final. Con eso ampliamos el modelo.
+#
+# IDs: UA-<CATEGORIA>-<NNN> (ver methodology/README.md).
+# Valores válidos (deben coincidir exactamente):
+#   clase_sesion:       Fondo | Específico | Recuperación | Descanso
+#   tipo_sesion:        Series | Tempo | Umbral | Base | Fondo | Fuerza | Recuperación
+#   objetivo_mesociclo: Base aeróbica | Acondicionamiento estructural |
+#                       Fuerza y economía | Acondicionamiento excéntrico |
+#                       Umbral | Potencia aeróbica | Velocidad y potencia |
+#                       Específico competencia | Puesta a punto | Transición
+#   zona:               Z1 | Z2 | Z3 | Z4 | Z5
+#   modo:               Construcción | Competición
+
+autor: "UPHILL_ATHLETE"
+fuente: "House, Johnston y Jornet, Training for the Uphill Athlete, 2019 — ___ (edición)"
+version: "0.1.0"
+
+deportes_soportados:
+  - "trail running"
+  - "___"                       # ¿skimo, montañismo? solo si lo vas a usar
+
+# ---------------------------------------------------------------------
+# reglas — condiciones sobre las sesiones. categoria: Carga | Progresión |
+# Descanso | Intensidad. objetivo_mesociclo / clase_sesion / tipo_sesion son
+# opcionales (sin ellos, la regla aplica siempre).
+#
+# El motor COMPRUEBA en código las reglas cuyos parametros sean uno de estos:
+#   incremento_maximo_pct: N              (volumen semanal, % máx. de subida)
+#   zona_fc_minima: "Zn"                  (zona mínima de un tipo de sesión)
+#   microciclos_carga_antes_descarga: N   (semanas de carga seguidas)
+# Cualquier otra regla también vale: el agente la sigue y la cita, pero el
+# motor no la puede comprobar (queda como "no evaluable").
+# ---------------------------------------------------------------------
+reglas:
+  - id: "UA-PROGRESION-001"
+    categoria: "Progresión"
+    descripcion: "___ (p. ___)"         # cuánto puede subir el volumen semanal
+    objetivo_mesociclo: "Base aeróbica"
+    parametros:
+      incremento_maximo_pct: 0          # ___
+
+  - id: "UA-INTENSIDAD-001"
+    categoria: "Intensidad"
+    descripcion: "___ (p. ___)"         # p. ej., en qué zona va el trabajo de base
+    objetivo_mesociclo: "Base aeróbica"
+    tipo_sesion: "Base"
+    parametros: {}
+
+  - id: "UA-CARGA-001"
+    categoria: "Carga"
+    descripcion: "___ (p. ___)"         # p. ej., cuántas semanas de carga antes de descargar
+    parametros:
+      microciclos_carga_antes_descarga: 0   # ___
+
+# ---------------------------------------------------------------------
+# restricciones_globales — sobre el plan completo.
+# Comprobables en código:
+#   microciclos_carga_max: N
+#   distancia_umbral_km: N + semanas_minimas: N   (carreras largas necesitan
+#                                                  un plan de al menos N semanas)
+# ---------------------------------------------------------------------
+restricciones_globales:
+  - id: "UA-GLOBAL-001"
+    descripcion: "___ (p. ___)"
+    parametros:
+      distancia_umbral_km: 0
+      semanas_minimas: 0
+
+# ---------------------------------------------------------------------
+# reglas_secuenciales — qué puede ir el día después de una clase de sesión.
+# clases_permitidas_despues es la lista de PERMITIDAS: lo que no esté queda
+# prohibido.
+# ---------------------------------------------------------------------
+reglas_secuenciales:
+  - id: "UA-SECUENCIA-001"
+    descripcion: "___ (p. ___)"
+    clase_sesion_previa: "Específico"
+    clases_permitidas_despues:
+      - "___"
+
+# ---------------------------------------------------------------------
+# reglas_conteo_microciclo — cuántas sesiones de una clase por semana
+# (minimo y/o maximo).
+# ---------------------------------------------------------------------
+reglas_conteo_microciclo:
+  - id: "UA-CONTEO-001"
+    descripcion: "___ (p. ___)"         # p. ej., sesiones de intensidad por semana
+    clase_sesion: "Específico"
+    maximo: 0
+
+# ---------------------------------------------------------------------
+# reglas_ajuste — al cerrar una semana o un bloque: métrica → acción.
+# metrica: adherencia_volumen_pct | adherencia_sesiones_pct | rpe_medio |
+#          mejora_test_pct | mejora_indicador_pasivo_pct
+# operador: < | <= | > | >=
+# accion: progresar | mantener | reducir_carga | repetir_microciclo |
+#         adelantar_descarga | extender_mesociclo
+# origen: autor | propio
+# ---------------------------------------------------------------------
+reglas_ajuste:
+  - id: "UA-AJUSTE-001"
+    descripcion: "___ (p. ___)"         # p. ej., qué hacer si un test aeróbico no mejora
+    condicion:
+      metrica: "mejora_test_pct"
+      operador: "<"
+      valor: 0
+    accion: "extender_mesociclo"
+    origen: "autor"
+
+# ---------------------------------------------------------------------
+# secuencias_bloques — qué bloques y en qué orden, una por modo.
+# Obligatoria para planificar en ese modo.
+# ---------------------------------------------------------------------
+secuencias_bloques:
+  - id: "UA-BLOQUES-001"
+    descripcion: "___ (p. ___)"
+    modo: "Construcción"
+    objetivos:
+      - "___"
+
+  - id: "UA-BLOQUES-002"
+    descripcion: "___ (p. ___)"
+    modo: "Competición"
+    objetivos:
+      - "___"
+
+# =====================================================================
+# SECCIONES NUEVAS — el modelo todavía no las acepta. Rellénalas igual: su
+# forma final se decidirá con lo que escribas aquí (docs/entradas.md).
+# =====================================================================
+
+# Cómo tratar cada prioridad de carrera (A objetivo, B competir, C participar).
+reglas_carreras:
+  - id: "UA-CARRERA-001"
+    prioridad: "B"
+    descripcion: "___ (p. ___)"         # descarga antes, recuperación después
+    dias_descarga_antes: 0
+    dias_recuperacion_despues: 0
+
+  - id: "UA-CARRERA-002"
+    prioridad: "C"
+    descripcion: "___ (p. ___)"         # qué sesión de la semana sustituye
+    sustituye_a: "___"                  # clase o tipo de sesión
+
+# Tests de control: cuáles, cada cuánto y qué mide cada uno.
+tests:
+  - id: "UA-TEST-001"
+    nombre: "___"                       # p. ej., test de umbral aeróbico
+    descripcion: "___ (p. ___)"         # protocolo
+    frecuencia: "___"                   # p. ej., al final de cada bloque
+    mide: "___"                         # qué resultado se anota
+
+# Zonas: cómo define el libro las zonas de intensidad (a partir de qué
+# umbrales) y su equivalencia con Z1–Z5 si la hay.
+zonas:
+  descripcion: "___ (p. ___)"
+  equivalencias:
+    Z1: "___"
+    Z2: "___"
+    Z3: "___"
+    Z4: "___"
+    Z5: "___"
+
+# Todo lo que no encaje arriba: fuerza (general, resistencia muscular),
+# caminar en subida o con carga, controles de deriva, etc. Texto libre.
+fuera_del_modelo:
+  - "___ (p. ___)"
