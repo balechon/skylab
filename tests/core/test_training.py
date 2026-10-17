@@ -5,6 +5,7 @@ from pydantic import ValidationError
 
 from core.training import (
     Carrera,
+    Intervalos,
     ClaseSesion,
     Mesociclo,
     Microciclo,
@@ -69,6 +70,7 @@ def test_sesion_planificada_valida_especifico_con_series():
         distancia_objetivo_km=8,
         zona_fc_objetivo=ZonasFC.Z4,
         descripcion="6x800 m a ritmo de 5K",
+        intervalos=Intervalos(repeticiones=6, trabajo=timedelta(minutes=3), recuperacion=timedelta(minutes=2)),
     )
     assert sesion.tipo_sesion == TipoSesion.SERIES
 
@@ -375,3 +377,57 @@ def test_plan_rechaza_mesociclos_solapados():
 def test_plan_rechaza_version_cero():
     with pytest.raises(ValidationError):
         _plan_construccion(version=0)
+
+
+# ---------- estructura de la sesión (lo que se envía al reloj) ----------
+
+def _series(**cambios) -> SesionPlanificada:
+    datos = dict(
+        fecha=date(2026, 10, 13),
+        clase_sesion=ClaseSesion.ESPECIFICO,
+        tipo_sesion=TipoSesion.SERIES,
+        zona_fc_objetivo=ZonasFC.Z4,
+        duracion_objetivo=timedelta(minutes=50),
+        calentamiento=timedelta(minutes=15),
+        intervalos=Intervalos(repeticiones=5, trabajo=timedelta(minutes=3), recuperacion=timedelta(minutes=2)),
+        vuelta_calma=timedelta(minutes=10),
+    )
+    datos.update(cambios)
+    return SesionPlanificada(**datos)
+
+
+def test_series_con_estructura_que_suma_la_duracion():
+    sesion = _series()  # 15 + 5×(3+2) + 10 = 50 min
+    assert sesion.duracion_estructura == timedelta(minutes=50)
+
+
+def test_series_sin_intervalos_se_rechaza():
+    with pytest.raises(ValidationError, match="necesita su estructura"):
+        _series(intervalos=None, calentamiento=None, vuelta_calma=None)
+
+
+def test_estructura_que_no_suma_la_duracion_se_rechaza():
+    with pytest.raises(ValidationError, match="suman"):
+        _series(duracion_objetivo=timedelta(minutes=60))
+
+
+def test_continua_necesita_tiempo_para_el_bloque_principal():
+    with pytest.raises(ValidationError, match="no dejan tiempo"):
+        SesionPlanificada(
+            fecha=date(2026, 10, 14),
+            clase_sesion=ClaseSesion.FONDO,
+            tipo_sesion=TipoSesion.FONDO,
+            duracion_objetivo=timedelta(minutes=20),
+            calentamiento=timedelta(minutes=10),
+            vuelta_calma=timedelta(minutes=10),
+        )
+
+
+def test_descanso_no_lleva_estructura():
+    with pytest.raises(ValidationError, match="Descanso"):
+        SesionPlanificada(fecha=date(2026, 10, 12), clase_sesion=ClaseSesion.DESCANSO, calentamiento=timedelta(minutes=5))
+
+
+def test_intervalo_sin_trabajo_se_rechaza():
+    with pytest.raises(ValidationError):
+        Intervalos(repeticiones=4, trabajo=timedelta(0))

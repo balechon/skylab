@@ -94,12 +94,41 @@ def _validar_bloques_ordenados(bloques: list, nombre: str) -> None:
 
 # ---------- Sesiones ----------
 
+_TOLERANCIA_DURACION = timedelta(minutes=1)
+
+
+class Intervalos(BaseModel):
+    """Bloque de series: repeticiones × (trabajo + recuperación), por tiempo."""
+
+    repeticiones: int = Field(ge=1)
+    trabajo: timedelta
+    recuperacion: timedelta = timedelta(0)
+    zona_fc_recuperacion: Optional[ZonasFC] = None
+
+    @model_validator(mode="after")
+    def validar_tiempos(self) -> "Intervalos":
+        if self.trabajo <= timedelta(0):
+            raise ValueError("trabajo debe ser positivo")
+        if self.recuperacion < timedelta(0):
+            raise ValueError("recuperacion no puede ser negativa")
+        return self
+
+    @property
+    def duracion(self) -> timedelta:
+        return self.repeticiones * (self.trabajo + self.recuperacion)
+
+
 class SesionPlanificada(BaseModel):
     """Una sesión que el plan prescribe (nivel 1). Lo que se pide, no lo que
     se hizo — eso es SesionRealizada.
 
     Descanso pasivo es una sesión explícita (no un día ausente) para poder
     contar y comparar semanas de carga y de descarga.
+
+    La estructura (calentamiento, intervalos, vuelta a la calma) es lo que se
+    envía al reloj como pasos del entrenamiento. Lo que el reloj no puede
+    estructurar (desnivel, terreno, indicaciones) va en `descripcion`, que
+    viaja como notas del entrenamiento.
     """
 
     fecha: date
@@ -111,7 +140,20 @@ class SesionPlanificada(BaseModel):
     duracion_objetivo: Optional[timedelta] = None
     zona_fc_objetivo: Optional[ZonasFC] = None
     desnivel_positivo_objetivo_m: Optional[float] = Field(default=None, ge=0)
-    descripcion: Optional[str] = None  # ej. "6x800 m a ritmo de 5K, rec. 2'"
+    descripcion: Optional[str] = None  # notas: "sube andando las rampas fuertes"
+
+    calentamiento: Optional[timedelta] = None
+    intervalos: Optional[Intervalos] = None
+    vuelta_calma: Optional[timedelta] = None
+
+    @property
+    def duracion_estructura(self) -> timedelta:
+        """Calentamiento + intervalos + vuelta a la calma."""
+        return (
+            (self.calentamiento or timedelta(0))
+            + (self.intervalos.duracion if self.intervalos else timedelta(0))
+            + (self.vuelta_calma or timedelta(0))
+        )
 
     @model_validator(mode="after")
     def validar_coherencia(self) -> "SesionPlanificada":
@@ -129,15 +171,41 @@ class SesionPlanificada(BaseModel):
                     "duracion_objetivo",
                     "zona_fc_objetivo",
                     "desnivel_positivo_objetivo_m",
+                    "calentamiento",
+                    "intervalos",
+                    "vuelta_calma",
                 )
                 if getattr(self, campo) is not None
             ]
             if con_carga:
                 raise ValueError(f"Descanso pasivo no debe tener {con_carga}")
-        elif self.distancia_objetivo_km is None and self.duracion_objetivo is None:
+            return self
+
+        if self.distancia_objetivo_km is None and self.duracion_objetivo is None:
             raise ValueError(
                 "Una sesión con carga necesita distancia_objetivo_km o duracion_objetivo"
             )
+        for campo in ("calentamiento", "vuelta_calma"):
+            valor = getattr(self, campo)
+            if valor is not None and valor < timedelta(0):
+                raise ValueError(f"{campo} no puede ser negativo")
+        if self.tipo_sesion == TipoSesion.SERIES and self.intervalos is None:
+            raise ValueError("Una sesión de Series necesita su estructura en `intervalos`")
+
+        if self.duracion_objetivo is not None:
+            estructura = self.duracion_estructura
+            if self.intervalos is not None:
+                # Con series, la estructura es la sesión entera.
+                if abs(estructura - self.duracion_objetivo) > _TOLERANCIA_DURACION:
+                    raise ValueError(
+                        f"calentamiento + intervalos + vuelta a la calma suman {estructura}, "
+                        f"pero duracion_objetivo es {self.duracion_objetivo}"
+                    )
+            elif estructura >= self.duracion_objetivo:
+                raise ValueError(
+                    f"calentamiento + vuelta a la calma ({estructura}) no dejan tiempo para el "
+                    f"bloque principal de {self.duracion_objetivo}"
+                )
         return self
 
 

@@ -12,6 +12,7 @@ from core.methodology import (
 )
 from core.training import (
     Carrera,
+    Intervalos,
     ClaseSesion,
     Mesociclo,
     Microciclo,
@@ -28,6 +29,10 @@ from core.loader import cargar_perfil
 from core.validator import validar_plan
 
 LUNES = date(2026, 10, 12)
+
+# Las sesiones de Series necesitan su estructura para poder enviarse al reloj.
+SERIES_6x3 = Intervalos(repeticiones=6, trabajo=timedelta(minutes=3), recuperacion=timedelta(minutes=2))
+
 PERFILES_DIR = Path(__file__).parents[2] / "methodology" / "profiles"
 
 CARGA, DESCARGA = TipoMicrociclo.CARGA, TipoMicrociclo.DESCARGA
@@ -40,7 +45,8 @@ def _sesion(dia: int, clase: ClaseSesion, tipo=None, zona=None, semana: int = 0)
     if clase == ClaseSesion.DESCANSO:
         return SesionPlanificada(fecha=fecha, clase_sesion=clase)
     return SesionPlanificada(
-        fecha=fecha, clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=8, zona_fc_objetivo=zona
+        fecha=fecha, clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=8, zona_fc_objetivo=zona,
+        intervalos=SERIES_6x3 if tipo == TipoSesion.SERIES else None,
     )
 
 

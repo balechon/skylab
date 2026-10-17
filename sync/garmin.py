@@ -2,7 +2,9 @@
 # propio en la red interna del docker-compose.
 #
 # Uso determinista (sin LLM) y con lista blanca: aunque el servidor expone
-# más de 150 tools, este cliente solo puede llamar a TOOLS_PERMITIDAS.
+# más de 150 tools, este cliente solo puede llamar a TOOLS_PERMITIDAS. Las de
+# escritura solo las usa la publicación de la semana (sync/publicacion.py),
+# nunca el agente.
 #
 # La traducción de una actividad de Garmin a SesionRealizada es una función
 # pura (actividad_a_sesion), separada del transporte para poder probarla sin
@@ -21,9 +23,16 @@ from core.training import SesionRealizada, Terreno, ZonasFC
 
 TOOLS_PERMITIDAS = frozenset(
     {
+        # lectura
         "get_activities_by_date",
         "get_activity",
         "get_activity_hr_in_timezones",
+        "get_scheduled_workouts",
+        # escritura (publicar la semana en el reloj)
+        "upload_workout",
+        "schedule_workout",
+        "unschedule_workout",
+        "delete_workout",
     }
 )
 
@@ -138,7 +147,7 @@ class ClienteGarmin:
         texto = resultado.content[0].text if resultado.content else ""
         if resultado.is_error:
             raise ErrorGarmin(f"{tool} falló: {texto[:300]}")
-        return json.loads(texto)
+        return _interpretar(tool, texto)
 
     async def actividades_entre(self, desde: date, hasta: date) -> list[dict[str, Any]]:
         # garmin-mcp numera las páginas desde 0 (pedir la 1 primero se salta
@@ -159,6 +168,44 @@ class ClienteGarmin:
 
     async def zonas_fc(self, activity_id: int) -> list[dict[str, Any]]:
         return await self._llamar("get_activity_hr_in_timezones", {"activity_id": activity_id})
+
+    async def subir_entrenamiento(self, entrenamiento: dict[str, Any]) -> int:
+        """Crea el entrenamiento en la biblioteca de Garmin; devuelve su id."""
+        respuesta = await self._llamar("upload_workout", {"workout_data": entrenamiento})
+        if not respuesta.get("workout_id"):
+            raise ErrorGarmin(f"upload_workout no devolvió workout_id: {respuesta}")
+        return int(respuesta["workout_id"])
+
+    async def programar(self, workout_id: int, fecha: date) -> None:
+        """Pone el entrenamiento en el calendario (y de ahí al reloj). Idempotente."""
+        await self._llamar("schedule_workout", {"workout_id": workout_id, "calendar_date": fecha.isoformat()})
+
+    async def programados_entre(self, desde: date, hasta: date) -> list[dict[str, Any]]:
+        respuesta = await self._llamar(
+            "get_scheduled_workouts", {"start_date": desde.isoformat(), "end_date": hasta.isoformat()}
+        )
+        return respuesta.get("scheduled_workouts", []) if isinstance(respuesta, dict) else []
+
+    async def desprogramar(self, scheduled_workout_id: int) -> None:
+        await self._llamar("unschedule_workout", {"scheduled_workout_id": scheduled_workout_id})
+
+    async def borrar_entrenamiento(self, workout_id: int) -> None:
+        await self._llamar("delete_workout", {"workout_id": workout_id})
+
+
+def _interpretar(tool: str, texto: str) -> Any:
+    """garmin-mcp no marca sus errores como errores MCP: los devuelve como
+    texto ("Error uploading workout: ...") o como JSON con status "failed".
+    Aquí se convierten en ErrorGarmin para que nunca pasen por un éxito."""
+    if tool == "get_scheduled_workouts" and texto.startswith("No workouts scheduled"):
+        return {"scheduled_workouts": []}
+    try:
+        datos = json.loads(texto)
+    except json.JSONDecodeError:
+        raise ErrorGarmin(f"{tool} falló: {texto[:300]}") from None
+    if isinstance(datos, dict) and datos.get("status") == "failed":
+        raise ErrorGarmin(f"{tool} falló: {datos.get('message', datos)}")
+    return datos
 
 
 async def traer_sesiones(

@@ -9,6 +9,7 @@ from agent.contexto import ContextoAgente, SolicitudCiclo
 from agent.resultado import EstadoResultado, Justificacion, Operacion, ResultadoAgente
 from core.training import (
     ClaseSesion,
+    Intervalos,
     Mesociclo,
     Microciclo,
     ModoPlan,
@@ -25,6 +26,8 @@ from core.loader import cargar_perfil
 
 HOY = date(2026, 10, 12)
 FIN = date(2026, 12, 31)
+# Las sesiones de Series necesitan su estructura para poder enviarse al reloj.
+SERIES_6x3 = Intervalos(repeticiones=6, trabajo=timedelta(minutes=3), recuperacion=timedelta(minutes=2))
 PERFIL = cargar_perfil(Path(__file__).parents[2] / "methodology" / "profiles" / "ejemplo_didactico.yaml")
 
 
@@ -32,7 +35,10 @@ def _sesion(dia, clase, tipo=None, zona=None, inicio=HOY):
     fecha = inicio + timedelta(days=dia)
     if clase == ClaseSesion.DESCANSO:
         return SesionPlanificada(fecha=fecha, clase_sesion=clase)
-    return SesionPlanificada(fecha=fecha, clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=8, zona_fc_objetivo=zona)
+    return SesionPlanificada(
+        fecha=fecha, clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=8, zona_fc_objetivo=zona,
+        intervalos=SERIES_6x3 if tipo == TipoSesion.SERIES else None,
+    )
 
 
 def semana_detallada(inicio=HOY):

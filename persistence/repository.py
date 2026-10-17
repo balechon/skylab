@@ -9,10 +9,11 @@
 # Pydantic: un dato inconsistente en la base nunca entra al motor como si
 # fuera válido.
 
-from datetime import date
+from datetime import date, datetime, timezone
 from enum import Enum
 from typing import Any, Optional
 
+from pydantic import BaseModel
 from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
@@ -20,6 +21,7 @@ from sqlalchemy.orm import Session
 from core.training import Plan, SesionRealizada
 from persistence.models import (
     EjecucionAgenteFila,
+    PublicacionGarminFila,
     PlanFila,
     PlanVersionFila,
     SesionRealizadaFila,
@@ -172,4 +174,44 @@ def id_version(db: Session, plan_id: int, version: int) -> int:
     """Id de la fila de una versión concreta (para enlazar la ejecución)."""
     return db.scalar(
         select(PlanVersionFila.id).where(PlanVersionFila.plan_id == plan_id, PlanVersionFila.version == version)
+    )
+
+
+# ---------- publicaciones en Garmin ----------
+
+class Publicacion(BaseModel):
+    id: int
+    plan_id: int
+    version: int
+    fecha: date
+    garmin_workout_id: int
+    nombre: str
+
+
+def publicaciones_activas(db: Session, desde: date, hasta: date) -> list[Publicacion]:
+    """Entrenamientos publicados y no retirados con fecha en [desde, hasta]."""
+    filas = db.scalars(
+        select(PublicacionGarminFila)
+        .where(PublicacionGarminFila.fecha.between(desde, hasta), PublicacionGarminFila.retirado_en.is_(None))
+        .order_by(PublicacionGarminFila.fecha, PublicacionGarminFila.id)
+    )
+    return [Publicacion.model_validate(f, from_attributes=True) for f in filas]
+
+
+def registrar_publicacion(
+    db: Session, plan_id: int, version: int, fecha: date, garmin_workout_id: int, nombre: str
+) -> int:
+    fila = PublicacionGarminFila(
+        plan_id=plan_id, version=version, fecha=fecha, garmin_workout_id=garmin_workout_id, nombre=nombre
+    )
+    db.add(fila)
+    db.flush()
+    return fila.id
+
+
+def marcar_retirada(db: Session, publicacion_id: int) -> None:
+    db.execute(
+        update(PublicacionGarminFila)
+        .where(PublicacionGarminFila.id == publicacion_id)
+        .values(retirado_en=datetime.now(timezone.utc))
     )

@@ -423,3 +423,29 @@ fuerza hasta fin de año; lo avisó, pero la guardia no podía detectarlo
 porque nada lo regulaba. Con la secuencia en el perfil, el objetivo de cada
 bloque lo decide la metodología. En la segunda prueba real el plan siguió
 la secuencia (Base aeróbica → Fuerza y economía) y la citó.
+
+## 2026-10-17 — Publicar la semana en el reloj vía garmin-mcp
+
+**Decisión**: se mantiene `garmin-mcp` (opción A) también para escribir. Cada
+`SesionPlanificada` se traduce en código determinista (`sync/entrenamientos.py`)
+al JSON de entrenamiento de Garmin y se sube con `upload_workout`, en vez de
+usar las tools simplificadas, porque estas no aceptan notas. Pasos por tiempo
+(o distancia si la sesión solo tiene distancia) con objetivo de zona de FC;
+lo que el reloj no estructura (desnivel, terreno, indicaciones) va en las
+notas (`description`). `SesionPlanificada` gana `calentamiento`, `intervalos`
+(repeticiones × trabajo + recuperación) y `vuelta_calma`; las Series exigen
+`intervalos` y, con series, la estructura debe sumar la duración.
+`POST /publicar` (servicio sync) publica la próxima semana del plan vigente:
+retira (quita del calendario y borra) lo publicado de otra versión para esas
+fechas, sube y programa lo nuevo, y lo registra en `publicacion_garmin`.
+Volver a publicar la misma versión no hace nada; lo borrado a mano en Garmin
+genera un aviso, no un fallo. Publicar es un paso fijo, nunca una tool del LLM.
+
+**Por qué**: garmin-mcp ya expone la escritura y planificamos por tiempo y
+FC (en trail el ritmo y los km engañan), que es lo que mejor cubre. Las
+notas llevan al reloj el detalle de trail que no tiene campos propios.
+
+**Lección**: los planes guardados como JSONB se revalidan al leerse; al
+endurecer el modelo (aquí, Series con estructura obligatoria) los planes de
+prueba anteriores dejaron de ser válidos. Cambios así necesitarán migrar los
+planes guardados.

@@ -16,6 +16,7 @@ from core.methodology import (
 )
 from core.training import (
     ClaseSesion,
+    Intervalos,
     Microciclo,
     ObjetivosMicrociclo,
     SesionPlanificada,
@@ -33,6 +34,10 @@ from core.deviation import (
 from core.loader import cargar_perfil
 
 LUNES = date(2026, 10, 12)
+
+# Las sesiones de Series necesitan su estructura para poder enviarse al reloj.
+SERIES_6x3 = Intervalos(repeticiones=6, trabajo=timedelta(minutes=3), recuperacion=timedelta(minutes=2))
+
 PERFILES_DIR = Path(__file__).parents[2] / "methodology" / "profiles"
 
 
@@ -43,7 +48,10 @@ def _dia(n: int) -> date:
 def _planificada(dia, clase, tipo=None, km=8) -> SesionPlanificada:
     if clase == ClaseSesion.DESCANSO:
         return SesionPlanificada(fecha=_dia(dia), clase_sesion=clase)
-    return SesionPlanificada(fecha=_dia(dia), clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=km)
+    return SesionPlanificada(
+        fecha=_dia(dia), clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=km,
+        intervalos=SERIES_6x3 if tipo == TipoSesion.SERIES else None,
+    )
 
 
 def _realizada(dia, minutos=60, km=10.0, zonas=None, rpe=None, clase=None) -> SesionRealizada:

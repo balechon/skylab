@@ -2,6 +2,8 @@
 # misma forma que devuelve garmin-mcp; los valores son sintéticos.
 
 import asyncio
+
+import pytest
 from datetime import date, timedelta
 
 from core.training import Terreno, ZonasFC
@@ -129,3 +131,24 @@ def test_paginacion_empieza_en_cero_y_recorre_todas():
     actividades = asyncio.run(cliente.actividades_entre(date(2026, 10, 1), date(2026, 10, 31)))
     assert [a["id"] for a in actividades] == [0, 1, 2, 3, 4]
     assert cliente.paginas_pedidas == [0, 1, 2]
+
+
+# ---------- errores que garmin-mcp devuelve como texto ----------
+
+from sync.garmin import ErrorGarmin, _interpretar  # noqa: E402
+
+
+def test_un_error_en_texto_plano_se_convierte_en_error():
+    with pytest.raises(ErrorGarmin, match="Error uploading workout"):
+        _interpretar("upload_workout", "Error uploading workout: 400 Bad Request")
+
+
+def test_un_status_failed_se_convierte_en_error():
+    with pytest.raises(ErrorGarmin, match="HTTP 500"):
+        _interpretar("schedule_workout", '{"status": "failed", "message": "Failed to schedule workout: HTTP 500"}')
+
+
+def test_sin_entrenamientos_programados_es_una_lista_vacia():
+    assert _interpretar("get_scheduled_workouts", "No workouts scheduled between 2026-10-19 and 2026-10-25.") == {
+        "scheduled_workouts": []
+    }

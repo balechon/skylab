@@ -104,3 +104,20 @@ class EjecucionAgenteFila(Base):
     tokens_entrada: Mapped[Optional[int]] = mapped_column(Integer)
     tokens_salida: Mapped[Optional[int]] = mapped_column(Integer)
     resultado: Mapped[dict[str, Any]] = mapped_column(JSONB)
+
+
+class PublicacionGarminFila(Base):
+    """Un entrenamiento enviado a Garmin para una fecha. Cuando una versión
+    nueva del plan cambia la semana, el anterior se retira (se quita del
+    calendario y se borra) y se marca retirado_en; nunca se borra la fila."""
+
+    __tablename__ = "publicacion_garmin"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    plan_id: Mapped[int] = mapped_column(ForeignKey("plan.id"))
+    version: Mapped[int] = mapped_column(Integer)
+    fecha: Mapped[date] = mapped_column(Date, index=True)
+    garmin_workout_id: Mapped[int] = mapped_column(BigInteger)
+    nombre: Mapped[str] = mapped_column(String(100))
+    creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    retirado_en: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))

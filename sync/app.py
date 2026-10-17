@@ -1,7 +1,10 @@
 # HTTP mínimo del servicio de sync. Solo accesible dentro de la red de Docker.
 #
-#   GET  /health  sin autenticación (healthcheck)
-#   POST /sync    Garmin → Postgres; exige "Authorization: Bearer <PB_COACH_API_TOKEN>"
+#   GET  /health     sin autenticación (healthcheck)
+#   POST /sync       Garmin → Postgres
+#   POST /publicar   próxima semana del plan vigente → Garmin (y al reloj)
+#
+# /sync y /publicar exigen "Authorization: Bearer <PB_COACH_API_TOKEN>".
 #
 # Es un servicio aparte de la API para que MCP no conviva con FastAPI ni con
 # el agente: si garmin-mcp falla o no está levantado, solo falla /sync, y la
@@ -20,6 +23,8 @@ from starlette.responses import JSONResponse
 from starlette.routing import Route
 
 from persistence.db import crear_engine, crear_sesiones
+from sync.garmin import ClienteGarmin
+from sync.publicacion import NadaQuePublicar, publicar_semana
 from sync.sincronizacion import sincronizar_ahora
 
 log = logging.getLogger("pb_coach.sync")
@@ -54,21 +59,44 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-async def sync(request: Request) -> JSONResponse:
+async def publicar_ahora(sesiones_db: sessionmaker):
+    """Abre la sesión MCP con garmin-mcp y publica la próxima semana."""
+    async with ClienteGarmin() as cliente:
+        return await publicar_semana(sesiones_db, cliente)
+
+
+async def _ejecutar(request: Request, operacion, nombre: str) -> JSONResponse:
     if (error := _error_de_token(request)) is not None:
         return error
     try:
-        resultado = await request.app.state.sincronizar(request.app.state.sesiones_db())
-    except (Exception, BaseExceptionGroup) as error:  # noqa: BLE001 — se devuelve a n8n
-        log.exception("Falló el sync de Garmin")
+        resultado = await operacion(request.app.state.sesiones_db())
+    except NadaQuePublicar as error:
+        return JSONResponse({"ok": False, "error": str(error)}, status_code=409)
+    except (Exception, BaseExceptionGroup) as error:  # noqa: BLE001 — se devuelve al llamante
+        log.exception("Falló %s", nombre)
         causa = causa_raiz(error)
         return JSONResponse({"ok": False, "error": f"{type(causa).__name__}: {causa}"}, status_code=502)
     return JSONResponse({"ok": True, "resultado": resultado.model_dump(mode="json")})
 
 
-def crear_app(sincronizar=sincronizar_ahora, fabrica_sesiones=sesiones_db) -> Starlette:
-    app = Starlette(routes=[Route("/health", health), Route("/sync", sync, methods=["POST"])])
+async def sync(request: Request) -> JSONResponse:
+    return await _ejecutar(request, request.app.state.sincronizar, "el sync de Garmin")
+
+
+async def publicar(request: Request) -> JSONResponse:
+    return await _ejecutar(request, request.app.state.publicar, "la publicación en Garmin")
+
+
+def crear_app(sincronizar=sincronizar_ahora, publicar_semana=publicar_ahora, fabrica_sesiones=sesiones_db) -> Starlette:
+    app = Starlette(
+        routes=[
+            Route("/health", health),
+            Route("/sync", sync, methods=["POST"]),
+            Route("/publicar", publicar, methods=["POST"]),
+        ]
+    )
     app.state.sincronizar = sincronizar
+    app.state.publicar = publicar_semana
     app.state.sesiones_db = fabrica_sesiones
     return app
 

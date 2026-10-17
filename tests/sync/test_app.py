@@ -68,3 +68,20 @@ def test_el_grupo_de_excepciones_de_mcp_devuelve_502_con_la_causa_real():
     respuesta = _cliente(_garmin_caido_como_mcp).post("/sync", headers=CABECERA)
     assert respuesta.status_code == 502
     assert respuesta.json()["error"] == "ConnectionError: Temporary failure in name resolution"
+
+
+async def _sin_plan(_db):
+    from sync.publicacion import NadaQuePublicar
+
+    raise NadaQuePublicar("No hay un plan activo que publicar.")
+
+
+def test_publicar_sin_plan_devuelve_409():
+    cliente = TestClient(crear_app(sincronizar=_sincroniza_bien, publicar_semana=_sin_plan, fabrica_sesiones=lambda: None))
+    respuesta = cliente.post("/publicar", headers=CABECERA)
+    assert respuesta.status_code == 409
+    assert respuesta.json() == {"ok": False, "error": "No hay un plan activo que publicar."}
+
+
+def test_publicar_exige_token():
+    assert _cliente().post("/publicar").status_code == 401
