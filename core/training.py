@@ -98,9 +98,11 @@ _TOLERANCIA_DURACION = timedelta(minutes=1)
 
 
 class Intervalos(BaseModel):
-    """Bloque de series: repeticiones × (trabajo + recuperación), por tiempo."""
+    """Bloque de series: repeticiones × (trabajo + recuperación), por tiempo.
+    Una sesión continua no lleva intervalos: su bloque principal es lo que
+    queda entre el calentamiento y la vuelta a la calma."""
 
-    repeticiones: int = Field(ge=1)
+    repeticiones: int = Field(ge=2)
     trabajo: timedelta
     recuperacion: timedelta = timedelta(0)
     zona_fc_recuperacion: Optional[ZonasFC] = None

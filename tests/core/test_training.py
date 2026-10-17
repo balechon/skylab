@@ -431,3 +431,10 @@ def test_descanso_no_lleva_estructura():
 def test_intervalo_sin_trabajo_se_rechaza():
     with pytest.raises(ValidationError):
         Intervalos(repeticiones=4, trabajo=timedelta(0))
+
+
+def test_una_sola_repeticion_no_son_intervalos():
+    # Una sesión continua se expresa con calentamiento + bloque + vuelta a la
+    # calma, no como "1 × (25' + 0')".
+    with pytest.raises(ValidationError):
+        Intervalos(repeticiones=1, trabajo=timedelta(minutes=25))
