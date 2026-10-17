@@ -10,7 +10,8 @@ Tiene dos modos: **construcción** (progresar sin carrera de referencia) y
 la aplica. Si no puede cumplir las restricciones, lo dice en vez de producir
 un plan bonito e incoherente.
 
-Visión completa: [`docs/vision.md`](docs/vision.md). Decisiones:
+Visión completa: [`docs/vision.md`](docs/vision.md). Entradas del sistema:
+[`docs/entradas.md`](docs/entradas.md). Decisiones:
 [`docs/decisions.md`](docs/decisions.md).
 
 Este proyecto es también un ejercicio de aprendizaje de agentes de IA y MCP.

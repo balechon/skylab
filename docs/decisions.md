@@ -541,3 +541,16 @@ hacerlo un programa sin LLM. El valor del modelo está en el lenguaje: leer lo
 que el atleta cuenta (cómo se sintió, viajes, molestias) junto a sus datos y
 explicarle la semana de forma personalizada. Es la base de la interfaz en
 Notion (fase B).
+
+## 2026-10-17 — Carreras con prioridad A/B/C y datos del atleta fuera del YAML
+
+**Decisión**: la metodología sigue en YAML (git); los datos del atleta (ficha,
+carreras, tests, semanas, entrenamientos) vivirán en Notion y llegarán a la
+API a través de un servicio aparte. Las carreras tienen prioridad A
+(objetivo), B (competir) o C (participar) y cuentan en los dos modos; una C
+es una sesión más de la semana. El tratamiento de cada prioridad sale de
+`reglas_carreras` en el perfil. Detalle en `docs/entradas.md`.
+
+**Por qué**: priorizar carreras es como trabajan los entrenadores y permite un
+plan personalizado (una C por diversión no rompe la progresión hacia la A)
+sin que el LLM invente cómo tratar cada una.
