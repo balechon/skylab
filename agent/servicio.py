@@ -14,7 +14,7 @@ from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
-from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, SolicitudCiclo
+from agent.esquemas import ComentariosAtleta, ContextoAgente, EstadoResultado, Operacion, SolicitudCiclo
 from agent.grafo import EjecucionAgente, ejecutar_agente
 from core.training import Microciclo, Plan
 from core.deviation import EvaluacionSemana, evaluar_semana
@@ -67,10 +67,11 @@ def _ultimo_microciclo_cerrado(plan: Plan, hoy: date) -> Optional[Microciclo]:
     return cerrados[-1] if cerrados else None
 
 
-def _registro(ejecucion: EjecucionAgente) -> dict[str, Any]:
-    if ejecucion.resultado is not None:
-        return ejecucion.resultado.model_dump(mode="json")
-    return {"detalle": ejecucion.detalle}
+def _registro(ejecucion: EjecucionAgente, comentarios: Optional[ComentariosAtleta] = None) -> dict[str, Any]:
+    registro = ejecucion.resultado.model_dump(mode="json") if ejecucion.resultado else {"detalle": ejecucion.detalle}
+    if comentarios is not None:
+        registro["comentarios_atleta"] = comentarios.model_dump(mode="json")
+    return registro
 
 
 def crear_ciclo(
@@ -111,7 +112,11 @@ def crear_ciclo(
 
 
 def ajuste_semanal(
-    sesiones_db: sessionmaker, modelo: BaseChatModel, hoy: Optional[date] = None, forzar: bool = False
+    sesiones_db: sessionmaker,
+    modelo: BaseChatModel,
+    hoy: Optional[date] = None,
+    forzar: bool = False,
+    comentarios: Optional[ComentariosAtleta] = None,
 ) -> RespuestaServicio:
     """Ajusta el plan a partir de la última semana cerrada. Si esa semana ya
     se ajustó (p. ej. el ciclo se lanzó dos veces), no llama al modelo y
@@ -147,6 +152,7 @@ def ajuste_semanal(
         sesiones=sesiones,
         plan_vigente=plan,
         evaluacion=evaluacion,
+        comentarios=comentarios,
     )
     ejecucion = ejecutar_agente(ctx, modelo)
     respuesta = RespuestaServicio(ejecucion=ejecucion, plan_id=plan_id, evaluacion=evaluacion)
@@ -163,7 +169,7 @@ def ajuste_semanal(
             db,
             operacion=Operacion.AJUSTE_SEMANAL.value,
             estado=resultado.estado.value if resultado else ejecucion.estado,
-            resultado=_registro(ejecucion),
+            resultado=_registro(ejecucion, comentarios),
             plan_version_id=version_id,
             modelo=ejecucion.modelo,
             tokens_entrada=ejecucion.tokens_entrada,

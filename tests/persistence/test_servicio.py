@@ -9,7 +9,7 @@ from sqlalchemy.orm import sessionmaker
 from agent import servicio
 from persistence import repository as repo
 from persistence.models import EjecucionAgenteFila
-from tests.agent.planes import HOY, contexto_ciclo, plan_valido, resultado_valido
+from tests.agent.planes import HOY, contexto_ciclo, feedback_ajuste, plan_valido, resultado_valido
 from tests.agent.test_grafo import ModeloFalso, _respuesta, _tool
 
 ANTERIOR = HOY - timedelta(weeks=1)
@@ -65,6 +65,7 @@ def test_ajuste_semanal_evalua_la_semana_cerrada_y_guarda_la_version_siguiente(s
     ajustado = plan_valido(version=2, primera=ANTERIOR, detallar=1)
     ajustado.mesociclos[0].microciclos[0] = vigente.mesociclos[0].microciclos[0]
     resultado = resultado_valido(ajustado, regla_ids=["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001"])
+    resultado.feedback = feedback_ajuste()
 
     respuesta = servicio.ajuste_semanal(sesiones_db, _entrega(resultado), hoy=HOY)
 
@@ -97,7 +98,9 @@ def test_la_misma_semana_no_se_ajusta_dos_veces(sesiones_db):
         plan = plan_valido(version=version, primera=ANTERIOR, detallar=1)
         plan.mesociclos[0].microciclos[0] = vigente.mesociclos[0].microciclos[0]
         regla_ids = ["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001"]
-        return _entrega(resultado_valido(plan, regla_ids=regla_ids))
+        resultado = resultado_valido(plan, regla_ids=regla_ids)
+        resultado.feedback = feedback_ajuste()
+        return _entrega(resultado)
 
     primero = servicio.ajuste_semanal(sesiones_db, ajuste(2), hoy=HOY)
     assert primero.version == 2
@@ -121,3 +124,27 @@ def test_un_ajuste_fallido_no_cuenta_como_hecho(sesiones_db):
     otro = ModeloFalso(respuestas=[_respuesta(stop="max_tokens")])
     servicio.ajuste_semanal(sesiones_db, otro, hoy=HOY)
     assert len(otro.llamadas) == 1
+
+
+
+def test_los_comentarios_del_atleta_quedan_registrados_con_la_ejecucion(sesiones_db):
+    from agent.esquemas import ComentarioSesion, ComentariosAtleta
+
+    vigente = plan_valido(version=1, primera=ANTERIOR, detallar=0)
+    with sesiones_db.begin() as db:
+        repo.crear_plan(db, vigente, perfil="ejemplo_didactico")
+    ajustado = plan_valido(version=2, primera=ANTERIOR, detallar=1)
+    ajustado.mesociclos[0].microciclos[0] = vigente.mesociclos[0].microciclos[0]
+    resultado = resultado_valido(ajustado, regla_ids=["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001"])
+    resultado.feedback = feedback_ajuste()
+    comentarios = ComentariosAtleta(
+        general="Viajo el jueves.", por_sesion=[ComentarioSesion(fecha=ANTERIOR, texto="Semana muy cargada en el trabajo.")]
+    )
+
+    respuesta = servicio.ajuste_semanal(sesiones_db, _entrega(resultado), hoy=HOY, comentarios=comentarios)
+
+    assert respuesta.ejecucion.resultado.feedback.por_que_cambia.startswith("Sin volumen hecho")
+    with sesiones_db() as db:
+        registro = db.scalars(select(EjecucionAgenteFila)).one().resultado
+    assert registro["comentarios_atleta"]["general"] == "Viajo el jueves."
+    assert registro["feedback"]["lo_que_paso"] == "No hubo actividad registrada esta semana."

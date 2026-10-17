@@ -521,3 +521,23 @@ prompt. Y cuando el ciclo semanal se programe, lanzarlo dos veces (un
 reintento, un cron duplicado) no debe generar dos versiones ni gastar
 tokens. Sigue pendiente: si un domingo no se ejecuta, la semana anterior no
 se evalúa (solo se evalúa la última cerrada).
+
+## 2026-10-17 — El LLM aporta lenguaje: comentarios del atleta y feedback semanal
+
+**Decisión**: el ajuste semanal acepta comentarios del atleta (uno general,
+para lo que viene, y uno por sesión) y el agente recibe la semana cerrada
+día a día —planificado, realizado, RPE y sensación de Garmin, y comentario—,
+calculada por el motor (`core/deviation.comparar_dias`). `ResultadoAgente`
+gana un `feedback` para el atleta (qué pasó, por qué cambia el plan y hasta
+3 consejos). La guardia lo exige en el ajuste semanal, exige que "por qué
+cambia" cite la regla de la acción del motor y que los consejos que se
+apoyan en la metodología citen reglas existentes. Ante dolor o lesión, el
+agente no da consejo médico: baja la carga dentro de las reglas y recomienda
+consultar a un profesional. Los comentarios quedan registrados con la
+ejecución.
+
+**Por qué**: con el motor y la guardia, componer un plan válido podría
+hacerlo un programa sin LLM. El valor del modelo está en el lenguaje: leer lo
+que el atleta cuenta (cómo se sintió, viajes, molestias) junto a sus datos y
+explicarle la semana de forma personalizada. Es la base de la interfaz en
+Notion (fase B).

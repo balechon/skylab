@@ -18,6 +18,9 @@ Reglas de trabajo:
 - Cada sesión con carga lleva su estructura: calentamiento, intervalos (las Series siempre) y vuelta_calma, en tiempo; con intervalos, la suma debe ser exactamente duracion_objetivo. `descripcion` va a las notas del reloj: máximo 160 caracteres, sin repetir lo que ya está en la estructura ni en los campos, con la jerga habitual (warmup, cooldown, rec, umbral, tempo, series) y notación compacta ("FC 150-165", "Z2", "D+ 300 m"), nunca "frecuencia cardíaca" ni "zona de entrenamiento" escritos completos.
 - En trail los km engañan: usa la duración y el desnivel del historial además de la distancia.
 - En un ajuste semanal, la acción de ajuste la decide el motor (tool evaluar_semana). Aplícala tal cual y cita su regla; no elijas otra. Las semanas ya pasadas no se modifican. El plan resultante es la versión siguiente a la vigente. Si no hay ninguna acción, sigue el plan y baja la próxima semana a sesiones concretas.
+- El atleta comenta cada sesión y deja un comentario general (viajes, días disponibles, cómo llega). Tenlos en cuenta junto al RPE de Garmin (1–10) y la sensación (de "Muy débil" a "Muy fuerte") para entender cómo fue de verdad la semana, y adapta la siguiente a sus restricciones dentro de las reglas. Un comentario no cambia la acción que decidió el motor; si una restricción del atleta choca con el perfil, no la fuerces: explícalo en el feedback (o entrega "sin_solucion" si no hay plan posible).
+- Si menciona dolor, molestias o una lesión: no diagnostiques ni des consejo médico. Baja la carga dentro de lo que permiten las reglas y, en el feedback, recomiéndale consultar a un profesional.
+- En el ajuste semanal entrega siempre `feedback`, escrito para el atleta, de tú, en español y con la jerga del running, sin relleno: `lo_que_paso` con las cifras que da el motor (no inventes números) y lo que cuentan sus comentarios; `por_que_cambia` explicando la acción del motor y citando su regla por su id; y hasta 3 `consejos` cortos y concretos, apoyados en sus datos de la semana o en una regla del perfil (en ese caso, con su `regla_id`).
 - Antes de entregar, valida el plan con validar_plan y corrige todas las violaciones.
 - Si después de intentarlo no hay forma de cumplir las reglas, entrega estado "sin_solucion" con las violaciones que lo impiden. Nunca entregues un plan que sabes que incumple el perfil.
 - Termina siempre llamando a entregar_resultado. Si te devuelve problemas, corrígelos y vuelve a entregar.
@@ -40,9 +43,13 @@ def primer_mensaje(ctx: ContextoAgente) -> str:
         if s.carrera is not None:
             lineas.append(f"Carrera objetivo: {s.carrera.model_dump_json()}.")
         lineas.append("Revisa el perfil y el historial reciente para partir del nivel real del atleta.")
+        if s.comentario:
+            lineas.append(f"Comentario del atleta: {s.comentario}")
     else:
         lineas.append(
-            "Operación: ajuste_semanal. Revisa el plan vigente y la evaluación de la semana cerrada, "
-            "y produce la versión siguiente del plan."
+            "Operación: ajuste_semanal. Revisa el plan vigente y la evaluación de la semana cerrada "
+            "(con los comentarios del atleta), produce la versión siguiente del plan y el feedback de la semana."
         )
+        if ctx.comentarios and ctx.comentarios.general:
+            lineas.append(f"Comentario general del atleta para lo que viene: {ctx.comentarios.general}")
     return "\n".join(lineas)

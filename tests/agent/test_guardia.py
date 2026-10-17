@@ -1,6 +1,6 @@
 from datetime import timedelta
 
-from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, ResultadoAgente
+from agent.esquemas import Consejo, ContextoAgente, EstadoResultado, Feedback, Operacion, ResultadoAgente
 from agent.guardia import revisar_resultado
 from core.methodology import AccionAjuste, MetricaAjuste
 from core.training import ModoPlan, ObjetivoMesociclo
@@ -111,7 +111,61 @@ def test_ajuste_debe_aplicar_y_citar_la_accion_del_motor():
     assert any("EJEMPLO-AJUSTE-001" in p and "repetir_microciclo" in p for p in sin_citar)
 
     citando = resultado_valido(_ajuste(), regla_ids=["EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001", "EJEMPLO-AJUSTE-001"])
+    citando.feedback = _feedback()
     assert revisar_resultado(citando, ctx) == []
+
+
+# ---------- feedback de la semana ----------
+
+REPETIR = ReglaActivada(
+    regla_id="EJEMPLO-AJUSTE-001",
+    accion=AccionAjuste.REPETIR_MICROCICLO,
+    parametros={},
+    metrica=MetricaAjuste.ADHERENCIA_VOLUMEN_PCT,
+    valor_metrica=45.0,
+    umbral="< 70",
+)
+
+
+def _feedback(por_que="Llegaste al 45% del volumen: por EJEMPLO-AJUSTE-001 repetimos la semana.", consejos=()):
+    return Feedback(
+        lo_que_paso="Hiciste 2 de 3 sesiones; el fondo del sábado no salió.",
+        por_que_cambia=por_que,
+        consejos=list(consejos),
+    )
+
+
+def _ajuste_citando():
+    return resultado_valido(_ajuste(), regla_ids=["EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001", "EJEMPLO-AJUSTE-001"])
+
+
+def test_el_ajuste_semanal_exige_feedback():
+    problemas = revisar_resultado(_ajuste_citando(), _contexto_ajuste(REPETIR))
+    assert any("necesita el feedback" in p for p in problemas)
+
+
+def test_el_feedback_debe_citar_la_regla_de_la_accion():
+    resultado = _ajuste_citando()
+    resultado.feedback = _feedback(por_que="Llegaste al 45% del volumen, así que repetimos la semana.")
+    problemas = revisar_resultado(resultado, _contexto_ajuste(REPETIR))
+    assert any("por_que_cambia debe explicar" in p and "EJEMPLO-AJUSTE-001" in p for p in problemas)
+
+
+def test_un_consejo_no_puede_citar_una_regla_inventada():
+    resultado = _ajuste_citando()
+    resultado.feedback = _feedback(consejos=[Consejo(texto="Haz cuestas los jueves.", regla_id="LYDIARD-CUESTAS-009")])
+    problemas = revisar_resultado(resultado, _contexto_ajuste(REPETIR))
+    assert any("no existen en el perfil" in p and "LYDIARD-CUESTAS-009" in p for p in problemas)
+
+
+def test_un_consejo_basado_en_datos_no_necesita_regla():
+    resultado = _ajuste_citando()
+    resultado.feedback = _feedback(consejos=[Consejo(texto="En las subidas largas camina antes de pasar a Z3.")])
+    assert revisar_resultado(resultado, _contexto_ajuste(REPETIR)) == []
+
+
+def test_crear_ciclo_no_exige_feedback():
+    assert revisar_resultado(resultado_valido(), contexto_ciclo()) == []
 
 
 # ---------- secuencia de bloques ----------

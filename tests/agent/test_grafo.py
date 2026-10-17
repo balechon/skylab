@@ -170,3 +170,41 @@ def test_tool_desconocida():
 
 def test_evaluar_semana_no_aplica_al_crear_ciclo():
     assert Herramientas(contexto_ciclo()).ejecutar("evaluar_semana", {}).es_error
+
+
+def test_evaluar_semana_junta_dia_a_dia_los_comentarios_del_atleta():
+    from datetime import timedelta
+
+    from agent.esquemas import ComentarioSesion, ComentariosAtleta, ContextoAgente, Operacion
+    from core.deviation import evaluar_semana
+    from core.training import SesionRealizada
+    from tests.agent.planes import HOY, PERFIL, plan_valido
+
+    anterior = HOY - timedelta(weeks=1)
+    vigente = plan_valido(version=1, primera=anterior, detallar=0)
+    semana = vigente.mesociclos[0].microciclos[0]
+    martes = semana.fecha_inicio + timedelta(days=1)
+    realizadas = [SesionRealizada(fecha=martes, duracion=timedelta(minutes=45), distancia_km=7, rpe=8, sensaciones="Débil")]
+    ctx = ContextoAgente(
+        operacion=Operacion.AJUSTE_SEMANAL,
+        hoy=HOY,
+        nombre_perfil="ejemplo_didactico",
+        perfil=PERFIL,
+        sesiones=realizadas,
+        plan_vigente=vigente,
+        evaluacion=evaluar_semana(semana, realizadas, PERFIL),
+        comentarios=ComentariosAtleta(
+            general="El jueves viajo, mejor el fondo el domingo.",
+            por_sesion=[
+                ComentarioSesion(fecha=martes, texto="Las últimas series me costaron mucho."),
+                ComentarioSesion(fecha=semana.fecha_fin + timedelta(days=-1), texto="Molestia leve en el gemelo."),
+            ],
+        ),
+    )
+    evaluacion = json.loads(Herramientas(ctx).ejecutar("evaluar_semana", {}).contenido)
+
+    dia_martes = next(d for d in evaluacion["dias"] if d["fecha"] == martes.isoformat())
+    assert dia_martes["comentario_atleta"] == "Las últimas series me costaron mucho."
+    assert dia_martes["realizadas"][0]["rpe"] == 8 and dia_martes["realizadas"][0]["sensaciones"] == "Débil"
+    assert evaluacion["otros_comentarios"] == [{"fecha": (semana.fecha_fin + timedelta(days=-1)).isoformat(), "texto": "Molestia leve en el gemelo."}]
+    assert evaluacion["comentario_general"] == "El jueves viajo, mejor el fondo el domingo."

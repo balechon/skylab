@@ -3,8 +3,9 @@
 #
 #   GET  /health            sin autenticación (healthcheck)
 #   POST /plan              crear un ciclo nuevo
-#   POST /semana/ajustar    ajuste semanal del plan vigente (?forzar=true para
-#                           rehacer una semana ya ajustada)
+#   POST /semana/ajustar    ajuste semanal del plan vigente; cuerpo opcional con
+#                           los comentarios del atleta; ?forzar=true para
+#                           rehacer una semana ya ajustada
 #
 # Garmin es otro servicio (pb-coach-sync): el sync se llama antes y la
 # publicación en el reloj después. Esta API no depende de MCP; trabaja con lo
@@ -24,7 +25,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
 from agent import servicio
-from agent.esquemas import SolicitudCiclo
+from agent.esquemas import ComentariosAtleta, SolicitudCiclo
 from agent.llm import crear_modelo
 from persistence.db import crear_engine, crear_sesiones
 
@@ -62,6 +63,7 @@ class RespuestaPlan(BaseModel):
     accion: Optional[dict[str, Any]] = None
     justificaciones: list[dict[str, Any]] = []
     violaciones: list[dict[str, Any]] = []
+    feedback: Optional[dict[str, Any]] = None
     detalle: str = ""
     tokens_entrada: int = 0
     tokens_salida: int = 0
@@ -79,6 +81,7 @@ def _respuesta(r: servicio.RespuestaServicio) -> RespuestaPlan:
         accion=accion.model_dump(mode="json") if accion else None,
         justificaciones=[j.model_dump(mode="json") for j in resultado.justificaciones] if resultado else [],
         violaciones=[v.model_dump(mode="json") for v in resultado.violaciones] if resultado else [],
+        feedback=resultado.feedback.model_dump(mode="json") if resultado and resultado.feedback else None,
         detalle=e.detalle,
         tokens_entrada=e.tokens_entrada,
         tokens_salida=e.tokens_salida,
@@ -108,12 +111,13 @@ def crear_plan(
 
 @app.post("/semana/ajustar", dependencies=[Depends(exigir_token)])
 def ajustar_semana(
+    comentarios: Optional[ComentariosAtleta] = None,
     forzar: bool = False,
     sesiones_db: sessionmaker = Depends(obtener_sesiones_db),
     modelo=Depends(obtener_modelo),
 ) -> RespuestaPlan:
     try:
-        respuesta = servicio.ajuste_semanal(sesiones_db, modelo, forzar=forzar)
+        respuesta = servicio.ajuste_semanal(sesiones_db, modelo, forzar=forzar, comentarios=comentarios)
     except (servicio.SinPlanVigente, servicio.AjusteYaHecho) as error:
         raise HTTPException(status_code=409, detail=str(error))
     except servicio.PerfilIncompleto as error:

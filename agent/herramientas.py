@@ -57,8 +57,9 @@ DEFINICIONES: list[dict[str, Any]] = [
     _definicion(
         "evaluar_semana",
         "Evaluación de la última semana cerrada hecha por el motor: adherencia, métricas, reglas de ajuste "
-        "activadas y la acción que se debe aplicar. Solo en ajuste_semanal. La acción la decide el motor; "
-        "tu trabajo es concretarla en el plan.",
+        "activadas y la acción que se debe aplicar; y, día a día, lo planificado frente a lo realizado con el "
+        "RPE, la sensación y el comentario del atleta, más su comentario general para lo que viene. Solo en "
+        "ajuste_semanal. La acción la decide el motor; tu trabajo es concretarla y explicarla.",
         {},
     ),
     _definicion(
@@ -132,7 +133,17 @@ class Herramientas:
             return SalidaTool(contenido="evaluar_semana solo aplica en ajuste_semanal.", es_error=True)
         if self.ctx.evaluacion is None:
             return SalidaTool(contenido="No hay ninguna semana cerrada que evaluar todavía.")
-        return SalidaTool(contenido=_json(self.ctx.evaluacion))
+        evaluacion = self.ctx.evaluacion.model_dump(mode="json", exclude_none=True)
+        comentarios = self.ctx.comentarios
+        if comentarios is not None:
+            por_fecha = {c.fecha.isoformat(): c.texto for c in comentarios.por_sesion}
+            for dia in evaluacion["dias"]:
+                if dia["fecha"] in por_fecha:
+                    dia["comentario_atleta"] = por_fecha.pop(dia["fecha"])
+            # Comentarios de días sin nada planificado ni realizado: no se pierden.
+            evaluacion["otros_comentarios"] = [{"fecha": f, "texto": t} for f, t in sorted(por_fecha.items())]
+            evaluacion["comentario_general"] = comentarios.general
+        return SalidaTool(contenido=_json(evaluacion))
 
     def _tool_validar_plan(self, plan_json: str) -> SalidaTool:
         try:

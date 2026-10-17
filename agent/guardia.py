@@ -27,6 +27,8 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
     ids = set(ctx.perfil.todos_los_ids())
     citados = {rid for j in resultado.justificaciones for rid in j.regla_ids}
     citados |= {v.regla_id for v in resultado.violaciones}
+    if resultado.feedback is not None:
+        citados |= {c.regla_id for c in resultado.feedback.consejos if c.regla_id}
     inventados = sorted(citados - ids)
     if inventados:
         problemas.append(f"Cita reglas que no existen en el perfil: {inventados}.")
@@ -139,5 +141,15 @@ def _revisar_ajuste(resultado: ResultadoAgente, plan: Plan, ctx: ContextoAgente)
             problemas.append(
                 f"El motor decidió {accion.accion.value} por {accion.regla_id}; "
                 "el plan debe aplicarla y citar esa regla."
+            )
+
+    # El feedback cierra la semana para el atleta: obligatorio, y si el motor
+    # decidió una acción, la explicación debe nombrar la regla que la causó.
+    if ctx.evaluacion is not None:
+        if resultado.feedback is None:
+            problemas.append("El ajuste semanal necesita el feedback de la semana para el atleta.")
+        elif accion is not None and accion.regla_id not in resultado.feedback.por_que_cambia:
+            problemas.append(
+                f"feedback.por_que_cambia debe explicar la acción {accion.accion.value} citando {accion.regla_id}."
             )
     return problemas

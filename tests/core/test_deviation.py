@@ -245,3 +245,22 @@ def test_semana_floja_con_el_perfil_didactico_repite_microciclo():
     assert evaluacion.accion.accion == AccionAjuste.REPETIR_MICROCICLO
     # EJEMPLO-AJUSTE-002 depende de un test que esta semana no hubo.
     assert [r.regla_id for r in evaluacion.reglas_no_evaluables] == ["EJEMPLO-AJUSTE-002"]
+
+
+# ---------- comparación día a día ----------
+
+def test_la_evaluacion_compara_dia_a_dia_con_rpe_y_sensaciones():
+    realizadas = [
+        SesionRealizada(fecha=_dia(1), duracion=timedelta(minutes=50), distancia_km=7, rpe=8, sensaciones="Fuerte"),
+        SesionRealizada(fecha=_dia(4), duracion=timedelta(minutes=30), distancia_km=5),  # no planificada
+    ]
+    evaluacion = evaluar_semana(_micro(sesiones=PLAN_SEMANA), realizadas, _perfil())
+
+    assert [d.fecha for d in evaluacion.dias] == [_dia(0), _dia(1), _dia(3), _dia(4), _dia(6)]
+    martes = evaluacion.dias[1]
+    assert martes.planificadas[0].tipo_sesion == TipoSesion.SERIES
+    assert (martes.realizadas[0].rpe, martes.realizadas[0].sensaciones) == (8, "Fuerte")
+    assert martes.realizadas[0].clase_sesion == ClaseSesion.ESPECIFICO  # ya clasificada
+    jueves, viernes = evaluacion.dias[2], evaluacion.dias[3]
+    assert jueves.planificadas and not jueves.realizadas  # sesión no hecha
+    assert viernes.realizadas and not viernes.planificadas  # actividad no planificada

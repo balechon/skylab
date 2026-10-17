@@ -5,7 +5,15 @@
 from datetime import date, timedelta
 from pathlib import Path
 
-from agent.esquemas import ContextoAgente, EstadoResultado, Justificacion, Operacion, ResultadoAgente, SolicitudCiclo
+from agent.esquemas import (
+    ContextoAgente,
+    EstadoResultado,
+    Feedback,
+    Justificacion,
+    Operacion,
+    ResultadoAgente,
+    SolicitudCiclo,
+)
 from core.training import (
     ClaseSesion,
     Intervalos,
@@ -110,3 +118,11 @@ def contexto_ciclo(**cambios) -> ContextoAgente:
     )
     datos.update(cambios)
     return ContextoAgente(**datos)
+
+
+def feedback_ajuste(regla_id: str = "EJEMPLO-AJUSTE-001") -> Feedback:
+    """Feedback válido para un ajuste en el que el motor activó `regla_id`."""
+    return Feedback(
+        lo_que_paso="No hubo actividad registrada esta semana.",
+        por_que_cambia=f"Sin volumen hecho, {regla_id} manda repetir la semana.",
+    )

@@ -25,6 +25,22 @@ class Operacion(str, Enum):
 
 # ---------- entrada ----------
 
+class ComentarioSesion(BaseModel):
+    """Lo que el atleta cuenta de una sesión: cómo se sintió, qué pasó."""
+
+    fecha: date
+    texto: str = Field(min_length=1, max_length=500)
+
+
+class ComentariosAtleta(BaseModel):
+    """Comentarios del atleta para el ajuste semanal. `general` sirve para lo
+    que viene ("viajo de miércoles a viernes", "cambiemos el fondo al
+    domingo"); `por_sesion`, para la semana que se cierra."""
+
+    general: Optional[str] = Field(default=None, max_length=1000)
+    por_sesion: list[ComentarioSesion] = Field(default_factory=list)
+
+
 class SolicitudCiclo(BaseModel):
     """Lo que se pide al crear un ciclo nuevo."""
 
@@ -32,6 +48,7 @@ class SolicitudCiclo(BaseModel):
     perfil: str
     fecha_objetivo: date
     carrera: Optional[Carrera] = None
+    comentario: Optional[str] = Field(default=None, max_length=1000)  # p. ej. "solo puedo 4 días por semana"
 
 
 class ContextoAgente(BaseModel):
@@ -43,6 +60,7 @@ class ContextoAgente(BaseModel):
     solicitud: Optional[SolicitudCiclo] = None  # solo crear_ciclo
     plan_vigente: Optional[Plan] = None          # solo ajuste_semanal
     evaluacion: Optional[EvaluacionSemana] = None  # solo ajuste_semanal, ya calculada por el motor
+    comentarios: Optional[ComentariosAtleta] = None  # solo ajuste_semanal
 
     @model_validator(mode="after")
     def validar_operacion(self) -> "ContextoAgente":
@@ -65,12 +83,28 @@ class Justificacion(BaseModel):
     regla_ids: list[str] = Field(min_length=1)
 
 
+class Consejo(BaseModel):
+    texto: str = Field(min_length=1, max_length=200)
+    # Si el consejo se apoya en la metodología, la regla que lo respalda; si
+    # se apoya en los datos de la semana, ninguna.
+    regla_id: Optional[str] = None
+
+
+class Feedback(BaseModel):
+    """Lo que el entrenador le dice al atleta al cerrar la semana."""
+
+    lo_que_paso: str = Field(min_length=1, max_length=500)
+    por_que_cambia: str = Field(min_length=1, max_length=500)
+    consejos: list[Consejo] = Field(default_factory=list, max_length=3)
+
+
 class ResultadoAgente(BaseModel):
     estado: EstadoResultado
     plan: Optional[Plan] = None
     justificaciones: list[Justificacion] = Field(default_factory=list)
     violaciones: list[Violacion] = Field(default_factory=list)
     resumen: str  # texto corto para la notificación
+    feedback: Optional[Feedback] = None  # obligatorio en el ajuste semanal (lo exige la guardia)
 
     @model_validator(mode="after")
     def validar_coherencia(self) -> "ResultadoAgente":

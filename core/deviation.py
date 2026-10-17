@@ -5,7 +5,7 @@
 # concreta después (ver docs/vision.md → Reglas de ajuste).
 
 import operator
-from datetime import timedelta
+from datetime import date, timedelta
 from statistics import mean
 from typing import Optional
 
@@ -55,6 +55,14 @@ class ReglaActivada(BaseModel):
     umbral: str  # ej. "< 70"
 
 
+class ComparacionDia(BaseModel):
+    """Lo planificado frente a lo realizado en un día de la semana cerrada."""
+
+    fecha: date
+    planificadas: list[SesionPlanificada] = Field(default_factory=list)
+    realizadas: list[SesionRealizada] = Field(default_factory=list)
+
+
 class EvaluacionSemana(BaseModel):
     """Lo que el motor concluye al cerrar una semana."""
 
@@ -64,6 +72,7 @@ class EvaluacionSemana(BaseModel):
     reglas_activadas: list[ReglaActivada] = Field(default_factory=list)
     reglas_no_evaluables: list[ReglaNoEvaluable] = Field(default_factory=list)
     accion: Optional[ReglaActivada] = None  # None: ninguna regla se activó, se sigue el plan
+    dias: list[ComparacionDia] = Field(default_factory=list)  # día a día, con RPE y sensaciones
 
 
 # ---------- clasificación ----------
@@ -174,6 +183,21 @@ def elegir_accion(activadas: list[ReglaActivada]) -> Optional[ReglaActivada]:
     return min(activadas, key=lambda r: PRIORIDAD_ACCIONES.index(r.accion))
 
 
+def comparar_dias(microciclo: Microciclo, realizadas: list[SesionRealizada]) -> list[ComparacionDia]:
+    """Días de la semana con algo planificado o realizado, en orden. Incluye
+    los descansos planificados (para ver si se entrenó un día de descanso) y
+    las actividades no planificadas."""
+    fechas = sorted({s.fecha for s in microciclo.sesiones} | {s.fecha for s in realizadas})
+    return [
+        ComparacionDia(
+            fecha=fecha,
+            planificadas=[s for s in microciclo.sesiones if s.fecha == fecha],
+            realizadas=[s for s in realizadas if s.fecha == fecha],
+        )
+        for fecha in fechas
+    ]
+
+
 def evaluar_semana(
     microciclo: Microciclo,
     realizadas: list[SesionRealizada],
@@ -224,4 +248,5 @@ def evaluar_semana(
         reglas_activadas=activadas,
         reglas_no_evaluables=no_evaluables,
         accion=elegir_accion(activadas),
+        dias=comparar_dias(microciclo, clasificadas),
     )

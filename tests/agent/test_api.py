@@ -45,3 +45,20 @@ def test_plan_con_perfil_inexistente(cliente):
 def test_plan_con_solicitud_invalida(cliente):
     respuesta = cliente.post("/plan", headers=CABECERA, json={"modo": "Inventado", "perfil": "x", "fecha_objetivo": "2026-12-31"})
     assert respuesta.status_code == 422
+
+
+def test_ajustar_acepta_comentarios_del_atleta(cliente, monkeypatch):
+    from agent import servicio
+
+    recibido = {}
+
+    def ajuste_falso(sesiones_db, modelo, forzar=False, comentarios=None):
+        recibido["comentarios"] = comentarios
+        raise servicio.SinPlanVigente("sin plan")
+
+    monkeypatch.setattr(servicio, "ajuste_semanal", ajuste_falso)
+    cuerpo = {"general": "Viajo el jueves.", "por_sesion": [{"fecha": "2026-10-20", "texto": "Me costó."}]}
+    respuesta = cliente.post("/semana/ajustar", headers=CABECERA, json=cuerpo)
+    assert respuesta.status_code == 409
+    assert recibido["comentarios"].general == "Viajo el jueves."
+    assert recibido["comentarios"].por_sesion[0].texto == "Me costó."
