@@ -95,7 +95,10 @@ def crear_plan(
 ) -> RespuestaPlan:
     if not (servicio.perfiles_dir() / f"{solicitud.perfil}.yaml").exists():
         raise HTTPException(status_code=404, detail=f"No existe el perfil {solicitud.perfil}")
-    return _respuesta(servicio.crear_ciclo(sesiones_db, cliente, solicitud))
+    try:
+        return _respuesta(servicio.crear_ciclo(sesiones_db, cliente, solicitud))
+    except servicio.PerfilIncompleto as error:
+        raise HTTPException(status_code=422, detail=str(error))
 
 
 @app.post("/semana/ajustar", dependencies=[Depends(exigir_token)])
@@ -107,4 +110,6 @@ def ajustar_semana(
         respuesta = servicio.ajuste_semanal(sesiones_db, cliente)
     except servicio.SinPlanVigente as error:
         raise HTTPException(status_code=409, detail=str(error))
+    except servicio.PerfilIncompleto as error:
+        raise HTTPException(status_code=422, detail=str(error))
     return _respuesta(respuesta)

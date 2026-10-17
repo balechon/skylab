@@ -97,3 +97,17 @@ reglas_ajuste:
       valor: 70
     accion: "repetir_microciclo"
     origen: "propio"
+
+# ---------------------------------------------------------------------
+# secuencias_bloques: SecuenciaBloques — qué mesociclos (bloques) tocan y en
+# qué orden, una secuencia por modo ("Construcción" / "Competición"). Los
+# objetivos usan los valores exactos de ObjetivoMesociclo. Obligatoria para
+# planificar en ese modo: sin ella el sistema no elige bloques por su cuenta.
+# ---------------------------------------------------------------------
+secuencias_bloques:
+  - id: "LYDIARD-BLOQUES-001"
+    descripcion: "En construcción: primero base aeróbica, después fuerza y economía."
+    modo: "Construcción"
+    objetivos:
+      - "Base aeróbica"
+      - "Fuerza y economía"

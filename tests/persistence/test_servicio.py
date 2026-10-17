@@ -64,7 +64,7 @@ def test_ajuste_semanal_evalua_la_semana_cerrada_y_guarda_la_version_siguiente(s
     # activa EJEMPLO-AJUSTE-001 (repetir_microciclo) y el plan debe citarla.
     ajustado = plan_valido(version=2, primera=ANTERIOR, detallar=1)
     ajustado.mesociclos[0].microciclos[0] = vigente.mesociclos[0].microciclos[0]
-    resultado = resultado_valido(ajustado, regla_ids=["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001"])
+    resultado = resultado_valido(ajustado, regla_ids=["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001"])
 
     respuesta = servicio.ajuste_semanal(sesiones_db, _entrega(resultado), hoy=HOY)
 
@@ -73,3 +73,16 @@ def test_ajuste_semanal_evalua_la_semana_cerrada_y_guarda_la_version_siguiente(s
     with sesiones_db() as db:
         historial = repo.historial_versiones(db, respuesta.plan_id)
     assert [(v, m) for v, m, _ in historial] == [(1, "crear_ciclo"), (2, "EJEMPLO-AJUSTE-001: repetir_microciclo")]
+
+
+def test_perfil_sin_secuencia_para_el_modo_no_llama_al_modelo(sesiones_db, monkeypatch, tmp_path):
+    perfil = (servicio.perfiles_dir() / "ejemplo_didactico.yaml").read_text(encoding="utf-8")
+    sin_secuencias = perfil[: perfil.index("secuencias_bloques:")]
+    (tmp_path / "sin_bloques.yaml").write_text(sin_secuencias, encoding="utf-8")
+    monkeypatch.setenv("PB_COACH_PERFILES_DIR", str(tmp_path))
+
+    solicitud = contexto_ciclo().solicitud.model_copy(update={"perfil": "sin_bloques"})
+    modelo = ClienteFalso([])
+    with pytest.raises(servicio.PerfilIncompleto, match="no define secuencias_bloques"):
+        servicio.crear_ciclo(sesiones_db, modelo, solicitud, hoy=HOY)
+    assert modelo.llamadas == []

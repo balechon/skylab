@@ -8,6 +8,7 @@ from core.methodology import (
     RegistroRegla,
     RegistroReglaSecuencial,
     RestriccionGlobal,
+    SecuenciaBloques,
 )
 from core.training import (
     Carrera,
@@ -303,4 +304,43 @@ def test_plan_correcto_cumple_todo_el_perfil_didactico():
     resultado = validar_plan(plan, perfil)
     assert resultado.violaciones == []
     assert resultado.completo
-    assert len(resultado.reglas_evaluadas) == 10
+    assert len(resultado.reglas_evaluadas) == 11  # incluye la secuencia de construcción, no la de competición
+
+
+# ---------- secuencia de bloques ----------
+
+BLOQUES = SecuenciaBloques(
+    id="X-BLOQUES-001",
+    descripcion="Base y después fuerza.",
+    modo=ModoPlan.CONSTRUCCION,
+    objetivos=[BASE, FUERZA],
+)
+
+
+def test_secuencia_completa_en_orden_es_valida():
+    plan = _plan((BASE, [_micro(0)]), (FUERZA, [_micro(1)]))
+    resultado = validar_plan(plan, _perfil(secuencias_bloques=[BLOQUES]))
+    assert resultado.valido and "X-BLOQUES-001" in resultado.reglas_evaluadas
+
+
+def test_horizonte_corto_puede_usar_solo_los_primeros_bloques():
+    plan = _plan((BASE, [_micro(0), _micro(1)]))
+    assert validar_plan(plan, _perfil(secuencias_bloques=[BLOQUES])).valido
+
+
+def test_bloque_fuera_de_orden_o_inventado_es_violacion():
+    plan = _plan((BASE, [_micro(0)]), (ObjetivoMesociclo.UMBRAL, [_micro(1)]))
+    resultado = validar_plan(plan, _perfil(secuencias_bloques=[BLOQUES]))
+    assert "es Umbral; según la secuencia debe ser Fuerza y economía" in resultado.violaciones[0].mensaje
+
+
+def test_mas_bloques_que_la_secuencia_es_violacion():
+    plan = _plan((BASE, [_micro(0)]), (FUERZA, [_micro(1)]), (BASE, [_micro(2)]))
+    resultado = validar_plan(plan, _perfil(secuencias_bloques=[BLOQUES]))
+    assert any("solo define 2" in v.mensaje for v in resultado.violaciones)
+
+
+def test_la_secuencia_de_otro_modo_no_se_evalua():
+    competicion = BLOQUES.model_copy(update={"id": "X-BLOQUES-002", "modo": ModoPlan.COMPETICION})
+    resultado = validar_plan(_plan((ObjetivoMesociclo.UMBRAL, [_micro(0)])), _perfil(secuencias_bloques=[competicion]))
+    assert resultado.valido and "X-BLOQUES-002" not in resultado.reglas_evaluadas

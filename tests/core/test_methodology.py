@@ -11,10 +11,11 @@ from core.methodology import (
     ReglaAjuste,
     ReglaConteoMicrociclo,
     RegistroRegla,
+    SecuenciaBloques,
     RegistroReglaSecuencial,
     RestriccionGlobal,
 )
-from core.training import ClaseSesion, ObjetivoMesociclo
+from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo
 
 
 def _regla_progresion() -> RegistroRegla:
@@ -195,3 +196,37 @@ def test_regla_ajuste_exige_origen():
 def test_perfil_rechaza_id_duplicado_en_reglas_ajuste():
     with pytest.raises(ValueError, match="duplicados"):
         _perfil_base(reglas_ajuste=[_regla_ajuste(id="LYDIARD-PROGRESION-001")])
+
+
+# ---------- SecuenciaBloques ----------
+
+def _secuencia(id_="LYDIARD-BLOQUES-001", modo=ModoPlan.CONSTRUCCION, objetivos=None) -> SecuenciaBloques:
+    return SecuenciaBloques(
+        id=id_,
+        descripcion="Base y después fuerza.",
+        modo=modo,
+        objetivos=[ObjetivoMesociclo.BASE_AEROBICA, ObjetivoMesociclo.FUERZA_Y_ECONOMIA] if objetivos is None else objetivos,
+    )
+
+
+def test_secuencia_para_devuelve_la_del_modo():
+    perfil = _perfil_base(secuencias_bloques=[_secuencia()])
+    assert perfil.secuencia_para(ModoPlan.CONSTRUCCION).id == "LYDIARD-BLOQUES-001"
+    assert perfil.secuencia_para(ModoPlan.COMPETICION) is None
+
+
+def test_secuencia_rechaza_lista_vacia():
+    with pytest.raises(ValueError):
+        _secuencia(objetivos=[])
+
+
+def test_perfil_rechaza_dos_secuencias_para_el_mismo_modo():
+    with pytest.raises(ValueError, match="Más de una secuencia"):
+        _perfil_base(secuencias_bloques=[_secuencia(), _secuencia(id_="LYDIARD-BLOQUES-002")])
+
+
+def test_ids_de_las_secuencias_cuentan_como_ids_del_perfil():
+    perfil = _perfil_base(secuencias_bloques=[_secuencia()])
+    assert "LYDIARD-BLOQUES-001" in perfil.todos_los_ids()
+    with pytest.raises(ValueError, match="duplicados"):
+        _perfil_base(secuencias_bloques=[_secuencia(id_="LYDIARD-PROGRESION-001")])

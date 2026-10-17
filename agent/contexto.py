@@ -42,14 +42,4 @@ class ContextoAgente(BaseModel):
 
 
 def ids_del_perfil(perfil: PerfilMetodologia) -> set[str]:
-    return {
-        r.id
-        for lista in (
-            perfil.reglas,
-            perfil.restricciones_globales,
-            perfil.reglas_secuenciales,
-            perfil.reglas_conteo_microciclo,
-            perfil.reglas_ajuste,
-        )
-        for r in lista
-    }
+    return set(perfil.todos_los_ids())

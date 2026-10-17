@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from core.training import ClaseSesion, ObjetivoMesociclo, TipoSesion
+from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo, TipoSesion
 
 
 class CategoriaRegla(str, Enum):
@@ -146,6 +146,21 @@ class ReglaAjuste(BaseModel):
     origen: OrigenRegla
 
 
+class SecuenciaBloques(BaseModel):
+    """Qué mesociclos (bloques) tocan, y en qué orden, para un modo de plan.
+
+    Los mesociclos del plan deben seguir la secuencia en orden. Si el
+    horizonte es corto puede usar solo los primeros bloques, pero nunca
+    saltarse uno, cambiar el orden ni añadir uno que no esté. Así el objetivo
+    de cada bloque lo decide la metodología, no el LLM.
+    """
+
+    id: str
+    descripcion: str
+    modo: ModoPlan
+    objetivos: list[ObjetivoMesociclo] = Field(min_length=1)
+
+
 class PerfilMetodologia(BaseModel):
     """Un perfil de metodología completo — la traducción íntegra de un YAML
     de autor a objetos tipados. Solo un perfil está activo por Plan.
@@ -161,16 +176,29 @@ class PerfilMetodologia(BaseModel):
     reglas_secuenciales: list[RegistroReglaSecuencial] = Field(default_factory=list)
     reglas_conteo_microciclo: list[ReglaConteoMicrociclo] = Field(default_factory=list)
     reglas_ajuste: list[ReglaAjuste] = Field(default_factory=list)
+    secuencias_bloques: list[SecuenciaBloques] = Field(default_factory=list)
+
+    def todos_los_ids(self) -> list[str]:
+        """IDs de todas las reglas del perfil, de todos los tipos."""
+        return [
+            r.id
+            for lista in (
+                self.reglas,
+                self.restricciones_globales,
+                self.reglas_secuenciales,
+                self.reglas_conteo_microciclo,
+                self.reglas_ajuste,
+                self.secuencias_bloques,
+            )
+            for r in lista
+        ]
+
+    def secuencia_para(self, modo: ModoPlan) -> Optional[SecuenciaBloques]:
+        return next((s for s in self.secuencias_bloques if s.modo == modo), None)
 
     @model_validator(mode="after")
     def validar_ids_unicos(self) -> "PerfilMetodologia":
-        todos_los_ids = (
-            [r.id for r in self.reglas]
-            + [r.id for r in self.restricciones_globales]
-            + [r.id for r in self.reglas_secuenciales]
-            + [r.id for r in self.reglas_conteo_microciclo]
-            + [r.id for r in self.reglas_ajuste]
-        )
+        todos_los_ids = self.todos_los_ids()
         vistos: set[str] = set()
         duplicados: set[str] = set()
         for rid in todos_los_ids:
@@ -180,4 +208,12 @@ class PerfilMetodologia(BaseModel):
 
         if duplicados:
             raise ValueError(f"IDs de regla duplicados en el perfil: {sorted(duplicados)}")
+        return self
+
+    @model_validator(mode="after")
+    def validar_una_secuencia_por_modo(self) -> "PerfilMetodologia":
+        modos = [s.modo for s in self.secuencias_bloques]
+        repetidos = sorted({m.value for m in modos if modos.count(m) > 1})
+        if repetidos:
+            raise ValueError(f"Más de una secuencia de bloques para el modo: {repetidos}")
         return self

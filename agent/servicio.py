@@ -32,6 +32,20 @@ class SinPlanVigente(RuntimeError):
     pass
 
 
+class PerfilIncompleto(RuntimeError):
+    """El perfil no tiene lo necesario para planificar sin inventar."""
+
+
+def _exigir_secuencia(perfil, nombre_perfil: str, modo) -> None:
+    # Se comprueba antes de llamar al modelo: sin secuencia de bloques no hay
+    # plan posible sin inventar, y no tiene sentido gastar tokens.
+    if perfil.secuencia_para(modo) is None:
+        raise PerfilIncompleto(
+            f"El perfil {nombre_perfil} no define secuencias_bloques para el modo {modo.value}: "
+            "añádela al YAML antes de planificar."
+        )
+
+
 class RespuestaServicio(BaseModel):
     ejecucion: EjecucionAgente
     plan_id: Optional[int] = None
@@ -59,11 +73,13 @@ def crear_ciclo(
     sesiones_db: sessionmaker, cliente: Any, solicitud: SolicitudCiclo, hoy: Optional[date] = None
 ) -> RespuestaServicio:
     hoy = hoy or date.today()
+    perfil = cargar_perfil(perfiles_dir() / f"{solicitud.perfil}.yaml")
+    _exigir_secuencia(perfil, solicitud.perfil, solicitud.modo)
     ctx = ContextoAgente(
         operacion=Operacion.CREAR_CICLO,
         hoy=hoy,
         nombre_perfil=solicitud.perfil,
-        perfil=cargar_perfil(perfiles_dir() / f"{solicitud.perfil}.yaml"),
+        perfil=perfil,
         sesiones=_sesiones_recientes(sesiones_db, hoy),
         solicitud=solicitud,
     )
@@ -100,6 +116,7 @@ def ajuste_semanal(sesiones_db: sessionmaker, cliente: Any, hoy: Optional[date] 
         nombre_perfil = repo.perfil_del_plan(db, plan_id)
 
     perfil = cargar_perfil(perfiles_dir() / f"{nombre_perfil}.yaml")
+    _exigir_secuencia(perfil, nombre_perfil, plan.modo)
     sesiones = _sesiones_recientes(sesiones_db, hoy)
     cerrado = _ultimo_microciclo_cerrado(plan, hoy)
     evaluacion = evaluar_semana(cerrado, sesiones, perfil) if cerrado else None

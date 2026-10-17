@@ -40,6 +40,8 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
     if len(validacion.violaciones) > _MAX_VIOLACIONES_LISTADAS:
         problemas.append(f"... y {len(validacion.violaciones) - _MAX_VIOLACIONES_LISTADAS} violaciones más.")
 
+    problemas += _revisar_secuencia_bloques(resultado, plan, ctx)
+
     if ctx.operacion == Operacion.CREAR_CICLO:
         problemas += _revisar_ciclo_nuevo(plan, ctx)
     else:
@@ -53,6 +55,21 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
             f"La semana del {proxima.fecha_inicio} es la próxima y debe tener sesiones concretas (nivel 1)."
         )
     return problemas
+
+
+def _revisar_secuencia_bloques(resultado: ResultadoAgente, plan: Plan, ctx: ContextoAgente) -> list[str]:
+    """Los objetivos de los mesociclos los fija el perfil. Sin secuencia para
+    el modo del plan no hay forma de elegirlos sin inventar: se rechaza."""
+    secuencia = ctx.perfil.secuencia_para(plan.modo)
+    if secuencia is None:
+        return [
+            f"El perfil no define la secuencia de bloques para el modo {plan.modo.value}: "
+            "los objetivos de los mesociclos no se pueden elegir sin inventar metodología."
+        ]
+    citadas = {rid for j in resultado.justificaciones for rid in j.regla_ids}
+    if secuencia.id not in citadas:
+        return [f"Los objetivos de los mesociclos deben justificarse citando {secuencia.id}."]
+    return []
 
 
 def _revisar_ciclo_nuevo(plan: Plan, ctx: ContextoAgente) -> list[str]:

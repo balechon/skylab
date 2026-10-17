@@ -78,7 +78,7 @@ def plan_valido(version=1, primera=HOY, detallar=0) -> Plan:
     return Plan(modo=ModoPlan.CONSTRUCCION, fecha_inicio=primera, fecha_objetivo=FIN, version=version, mesociclos=[base, fuerza])
 
 
-def resultado_valido(plan: Plan | None = None, regla_ids=("EJEMPLO-PROGRESION-001",)) -> ResultadoAgente:
+def resultado_valido(plan: Plan | None = None, regla_ids=("EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001")) -> ResultadoAgente:
     return ResultadoAgente(
         estado=EstadoResultado.PLAN_VALIDO,
         plan=plan or plan_valido(),

@@ -132,3 +132,24 @@ reglas_ajuste:
     parametros:
       cambio_carga_pct: 5
     origen: "propio"
+
+# ---------------------------------------------------------------------
+# secuencias_bloques: SecuenciaBloques — qué mesociclos tocan y en qué
+# orden en cada modo. El plan los sigue en orden (puede usar solo los
+# primeros si el horizonte es corto); el LLM no elige los objetivos.
+# ---------------------------------------------------------------------
+secuencias_bloques:
+  - id: "EJEMPLO-BLOQUES-001"
+    descripcion: "En construcción: primero base aeróbica, después fuerza y economía."
+    modo: "Construcción"
+    objetivos:
+      - "Base aeróbica"
+      - "Fuerza y economía"
+
+  - id: "EJEMPLO-BLOQUES-002"
+    descripcion: "En competición: base aeróbica, específico de competencia y puesta a punto antes de la carrera."
+    modo: "Competición"
+    objetivos:
+      - "Base aeróbica"
+      - "Específico competencia"
+      - "Puesta a punto"

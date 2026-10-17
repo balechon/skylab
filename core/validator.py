@@ -23,6 +23,7 @@ from core.methodology import (
     RegistroReglaSecuencial,
     ReglaConteoMicrociclo,
     RestriccionGlobal,
+    SecuenciaBloques,
 )
 from core.training import (
     Mesociclo,
@@ -284,6 +285,37 @@ def _conteo(plan: Plan, regla: ReglaConteoMicrociclo) -> list[Violacion]:
     return violaciones
 
 
+def _secuencia_bloques(plan: Plan, secuencia: SecuenciaBloques) -> list[Violacion]:
+    """Los mesociclos siguen la secuencia del perfil en orden: el plan puede
+    usar solo los primeros bloques, pero no saltarse, reordenar ni añadir."""
+    esperados = ", ".join(o.value for o in secuencia.objetivos)
+    violaciones = []
+    if len(plan.mesociclos) > len(secuencia.objetivos):
+        violaciones.append(
+            Violacion(
+                regla_id=secuencia.id,
+                fecha=plan.mesociclos[len(secuencia.objetivos)].fecha_inicio,
+                mensaje=(
+                    f"El plan tiene {len(plan.mesociclos)} mesociclos y la secuencia solo "
+                    f"define {len(secuencia.objetivos)}: {esperados}."
+                ),
+            )
+        )
+    for posicion, (meso, esperado) in enumerate(zip(plan.mesociclos, secuencia.objetivos), start=1):
+        if meso.objetivo != esperado:
+            violaciones.append(
+                Violacion(
+                    regla_id=secuencia.id,
+                    fecha=meso.fecha_inicio,
+                    mensaje=(
+                        f"El mesociclo {posicion} ({meso.fecha_inicio}) es {meso.objetivo.value}; "
+                        f"según la secuencia debe ser {esperado.value} (orden: {esperados})."
+                    ),
+                )
+            )
+    return violaciones
+
+
 # ---------- punto de entrada ----------
 
 def validar_plan(plan: Plan, perfil: PerfilMetodologia) -> ResultadoValidacion:
@@ -322,5 +354,10 @@ def validar_plan(plan: Plan, perfil: PerfilMetodologia) -> ResultadoValidacion:
 
     for regla in perfil.reglas_conteo_microciclo:
         registrar(regla.id, _conteo(plan, regla))
+
+    # Solo la secuencia del modo del plan; las de otros modos no aplican.
+    secuencia = perfil.secuencia_para(plan.modo)
+    if secuencia is not None:
+        registrar(secuencia.id, _secuencia_bloques(plan, secuencia))
 
     return resultado

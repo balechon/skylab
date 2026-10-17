@@ -4,7 +4,7 @@ from agent.contexto import ContextoAgente
 from agent.guardia import revisar_resultado
 from agent.resultado import EstadoResultado, Operacion, ResultadoAgente
 from core.methodology import AccionAjuste, MetricaAjuste
-from core.training import ModoPlan
+from core.training import ModoPlan, ObjetivoMesociclo
 from core.calculator import resumir_periodo
 from core.deviation import EvaluacionSemana, ReglaActivada
 from core.validator import Violacion
@@ -111,5 +111,25 @@ def test_ajuste_debe_aplicar_y_citar_la_accion_del_motor():
     sin_citar = revisar_resultado(resultado_valido(_ajuste()), ctx)
     assert any("EJEMPLO-AJUSTE-001" in p and "repetir_microciclo" in p for p in sin_citar)
 
-    citando = resultado_valido(_ajuste(), regla_ids=["EJEMPLO-PROGRESION-001", "EJEMPLO-AJUSTE-001"])
+    citando = resultado_valido(_ajuste(), regla_ids=["EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001", "EJEMPLO-AJUSTE-001"])
     assert revisar_resultado(citando, ctx) == []
+
+
+# ---------- secuencia de bloques ----------
+
+def test_rechaza_bloques_que_no_siguen_la_secuencia():
+    plan = plan_valido()
+    plan.mesociclos[1].objetivo = ObjetivoMesociclo.UMBRAL  # la prueba real eligió esto sin regla
+    problemas = revisar_resultado(resultado_valido(plan), contexto_ciclo())
+    assert any("EJEMPLO-BLOQUES-001" in p and "Umbral" in p for p in problemas)
+
+
+def test_exige_citar_la_secuencia():
+    problemas = revisar_resultado(resultado_valido(regla_ids=["EJEMPLO-PROGRESION-001"]), contexto_ciclo())
+    assert any("citando EJEMPLO-BLOQUES-001" in p for p in problemas)
+
+
+def test_sin_secuencia_para_el_modo_se_rechaza():
+    perfil = PERFIL.model_copy(update={"secuencias_bloques": []})
+    problemas = revisar_resultado(resultado_valido(regla_ids=["EJEMPLO-PROGRESION-001"]), contexto_ciclo(perfil=perfil))
+    assert any("no define la secuencia de bloques" in p for p in problemas)

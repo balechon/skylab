@@ -405,3 +405,21 @@ importar `sync`, ni `agent` en la del sync.
 
 **Por qué**: menos niveles de carpetas y nombres más directos, sin perder la
 separación de dependencias ni de imágenes de la decisión anterior.
+
+## 2026-10-17 — Secuencia de bloques en el perfil
+
+**Decisión**: el perfil define `secuencias_bloques`: por cada modo
+(construcción / competición), qué mesociclos tocan y en qué orden. El
+validador exige que los mesociclos del plan sigan esa secuencia (puede usar
+solo los primeros bloques si el horizonte es corto, pero no saltar,
+reordenar ni añadir). La guardia exige además citar el ID de la secuencia.
+Si el perfil no tiene secuencia para el modo pedido, el servicio rechaza la
+petición antes de llamar al modelo (HTTP 422). Se prevé, más adelante,
+permitir que la solicitud fije los bloques a mano como excepción.
+
+**Por qué**: en la primera prueba real el modelo eligió por su cuenta los
+bloques futuros (Potencia aeróbica, Umbral), contradiciendo el plan de base y
+fuerza hasta fin de año; lo avisó, pero la guardia no podía detectarlo
+porque nada lo regulaba. Con la secuencia en el perfil, el objetivo de cada
+bloque lo decide la metodología. En la segunda prueba real el plan siguió
+la secuencia (Base aeróbica → Fuerza y economía) y la citó.
