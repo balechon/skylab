@@ -1,11 +1,13 @@
-# API HTTP mínima que n8n invoca (solo accesible dentro de la red de Docker).
+# API HTTP mínima de PB_coach. Publicada solo en 127.0.0.1 del host (en el
+# VPS, por túnel SSH); contrato en docs/api.md.
 #
 #   GET  /health            sin autenticación (healthcheck)
 #   POST /plan              crear un ciclo nuevo
 #   POST /semana/ajustar    ajuste semanal del plan vigente
 #
-# El sync de Garmin es otro servicio (pb-coach-sync): n8n lo llama antes.
-# Esta API no depende de MCP; trabaja con lo que ya está en Postgres.
+# Garmin es otro servicio (pb-coach-sync): el sync se llama antes y la
+# publicación en el reloj después. Esta API no depende de MCP; trabaja con lo
+# que ya está en Postgres.
 #
 # Todo salvo /health exige "Authorization: Bearer <PB_COACH_API_TOKEN>". Si el
 # token no está configurado, la API se niega a operar en vez de quedar abierta.

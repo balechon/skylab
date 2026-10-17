@@ -55,6 +55,8 @@ propio queda abierto como posible extensión futura, no descartado.
 
 ## 2026-08-18 — n8n como orquestador del flujo completo
 
+> **Reemplazada (2026-10-17)**: n8n se quitó del proyecto. Ver "Fuera n8n" más abajo.
+
 **Decisión**: n8n dispara el proceso (cron/webhook), invoca al agente y
 gestiona notificaciones del resultado, en vez de limitarse a sincronizar
 datos de Strava.
@@ -199,6 +201,8 @@ fuerza para montaña); Nacho Martínez aporta una referencia de trail
 específica en español, útil sobre todo para el modo competición.
 
 ## 2026-10-06 — n8n dedicado en el compose, sin exposición pública
+
+> **Reemplazada (2026-10-17)**: n8n se quitó del proyecto. Ver "Fuera n8n" más abajo.
 
 **Decisión**: el `docker-compose` del proyecto incluye su propio n8n
 (`n8nio/n8n`, versión fijada). Solo n8n publica un puerto, y únicamente en
@@ -449,3 +453,18 @@ notas llevan al reloj el detalle de trail que no tiene campos propios.
 endurecer el modelo (aquí, Series con estructura obligatoria) los planes de
 prueba anteriores dejaron de ser válidos. Cambios así necesitarán migrar los
 planes guardados.
+
+## 2026-10-17 — Fuera n8n; API y Garmin publicados en 127.0.0.1
+
+**Decisión**: se quita n8n del proyecto (servicio, volumen, su base en
+Postgres para instalaciones nuevas y sus variables). La API (8000) y el
+servicio de Garmin (8001) se publican solo en `127.0.0.1` del host; en el VPS
+se llaman por túnel SSH, siempre con `PB_COACH_API_TOKEN`. El ciclo semanal
+(sync → ajuste → publicar) se lanza a mano con tres llamadas (ver
+`docs/api.md`); cómo programarlo queda pendiente de decidir.
+
+**Por qué**: n8n añadía dos piezas (su contenedor y su base) para hacer solo
+de cron y de aviso; la parte valiosa del proyecto —planificar y publicar en
+el reloj— vive en el código. Sin n8n el stack es más simple y la
+programación se decidirá aparte (p. ej. dentro de la API o con el cron del
+VPS).

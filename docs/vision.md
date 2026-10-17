@@ -97,26 +97,26 @@ El perfil de metodología, además de describir cómo es un plan válido, define
 ## Arquitectura (resumen)
 
 ```
-VPS Hostinger · docker-compose
-n8n ── cron semanal ──▶ POST /semana/ajustar ─┐
-    └─ manual ────────▶ POST /plan ───────────┤
-                                              ▼
-                        pb-coach: API mínima
-                          ├─ sync (MCP, sin LLM) ◀── garmin-mcp ◀── Garmin Connect
-                          ├─ agente LLM (propone)
-                          ├─ motor determinista (decide)
-                          ├─ perfiles YAML (metodología)
-                          ├─ PostgreSQL (planes versionados, sesiones, ejecuciones)
-                          └─ publicar (MCP, sin LLM) ──▶ garmin-mcp ──▶ reloj
-n8n ◀── resultado ── Telegram
+VPS Hostinger · docker-compose (todo publicado solo en 127.0.0.1)
+
+pb-coach-sync  POST /sync      ◀── garmin-mcp ◀── Garmin Connect   (actividades → Postgres)
+pb-coach-api   POST /plan
+               POST /semana/ajustar
+                 ├─ agente LLM (propone)
+                 ├─ motor determinista (decide)
+                 ├─ perfiles YAML (metodología)
+                 └─ PostgreSQL (planes versionados, sesiones, ejecuciones)
+pb-coach-sync  POST /publicar  ──▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
 ```
 
-- `docker-compose` con tres servicios (`n8n`, `pb-coach`, `garmin-mcp`) en
-  el VPS de Hostinger.
-- `pb-coach` y `garmin-mcp` no se exponen a internet; solo n8n llama a
-  `pb-coach`, con un token compartido.
+- `docker-compose` con `postgres`, `pb-coach-api`, `pb-coach-sync` y
+  `garmin-mcp` en el VPS de Hostinger.
+- Nada se expone a internet: la API (8000) y el servicio de Garmin (8001)
+  solo escuchan en `127.0.0.1` y se llaman por túnel SSH, con un token.
 - Garmin entra y sale solo por código determinista; el LLM trabaja con datos
   ya validados por `core/` (Pydantic) y agregados por `calculator.py`.
+- El ciclo semanal se lanza a mano por ahora; su programación automática
+  está pendiente de decidir.
 
 ## Decisiones tomadas
 
@@ -125,7 +125,7 @@ n8n ◀── resultado ── Telegram
 - **Metodologías**: "Training for the Uphill Athlete" (House & Johnston) y
   "Trail Running: ciencia y entrenamiento" (Nacho Martínez), transcritas a
   mano; un perfil activo por plan.
-- **Host**: VPS de Hostinger, junto a n8n.
+- **Host**: VPS de Hostinger.
 
 ## Fuera de alcance
 

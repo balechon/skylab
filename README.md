@@ -13,8 +13,7 @@ un plan bonito e incoherente.
 Visión completa: [`docs/vision.md`](docs/vision.md). Decisiones:
 [`docs/decisions.md`](docs/decisions.md).
 
-Este proyecto es también un ejercicio de aprendizaje de agentes de IA,
-n8n y MCP.
+Este proyecto es también un ejercicio de aprendizaje de agentes de IA y MCP.
 
 ## Principio de diseño
 
@@ -33,17 +32,17 @@ El sistema es un motor híbrido:
 ## Flujo
 
 ```
-n8n ── POST pb-coach-sync /sync ──▶ garmin-mcp ──▶ Garmin → Postgres
-n8n ── cron semanal ──▶ POST /semana/ajustar ─┐
-    └─ manual ────────▶ POST /plan ───────────┤
-                                              ▼
-                        pb-coach-api: API mínima
-                          ├─ agente LLM (propone)
-                          ├─ motor determinista (decide)
-                          ├─ perfiles YAML (metodología)
-                          └─ PostgreSQL (planes versionados, sesiones)
-n8n ◀── resultado ── Telegram
+POST pb-coach-sync /sync ─────────▶ garmin-mcp ◀── Garmin Connect  (actividades → Postgres)
+POST pb-coach-api  /semana/ajustar ─┐
+POST pb-coach-api  /plan ───────────┤
+                                    ▼
+                    pb-coach-api: agente LLM (propone) + motor determinista (decide)
+                                  + perfiles YAML + PostgreSQL (planes versionados)
+POST pb-coach-sync /publicar ─────▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
 ```
+
+Por ahora el ciclo se lanza a mano (ver `docs/api.md`); la programación
+automática está pendiente de decidir.
 
 ![Arquitectura](docs/arquitectura.png)
 
@@ -60,7 +59,7 @@ sync/           pb-coach-sync         sync Garmin → Postgres vía MCP (garmin.
 agent/          pb-coach-agent        agente LLM (bucle, tools, guardia, servicio) + api.py
 methodology/    Perfiles de metodología (YAML)
 tests/          Tests de todo el workspace
-docs/           Visión, decisiones, contrato de n8n y diagramas
+docs/           Visión, decisiones, contrato de la API y diagramas
 docker/         Inicialización de Postgres
 ```
 
@@ -69,17 +68,18 @@ docker/         Inicialización de Postgres
 - Hecho: modelos de dominio alineados con la visión (modos construcción /
   competición, tres niveles de detalle, sesión planificada vs. realizada,
   reglas de ajuste), loader de perfiles, perfil didáctico, API con `/health`
-  y stack Docker (n8n + pb-coach + garmin-mcp), todo con tests.
+  y stack Docker (postgres + pb-coach + garmin-mcp), todo con tests.
 - Hecho también: motor determinista completo (`core/calculator.py`,
-  `validator.py`, `deviation.py`) y Postgres en el stack (n8n ya lo usa).
+  `validator.py`, `deviation.py`) y Postgres en el stack.
 - Hecho también: persistencia en Postgres (`persistence/`, SQLAlchemy +
   migraciones Alembic en `persistence/migrations/`).
 - Hecho también: sync de Garmin (`sync/`) y agente LLM (`agent/`:
   bucle de tool use con Claude, guardia final y servicio que persiste),
   expuesto en la API (`POST /plan`, `POST /semana/ajustar`); el sync es un
   servicio aparte (`pb-coach-sync`, `POST /sync`).
-- Siguiente: publicar la semana en el reloj, workflows de n8n y transcribir
-  el primer perfil real.
+- Hecho también: publicar la semana en el reloj (`POST /publicar`).
+- Siguiente: migrar el agente a LangGraph, pipeline de observabilidad,
+  programación automática del ciclo semanal y el primer perfil real.
 
 ## Setup
 
@@ -97,7 +97,7 @@ uv add --package pb-coach-agent <paquete>   # dependencia para un paquete concre
 Una imagen por servicio, cada una con solo su paquete:
 
 ```bash
-docker compose up -d --build                    # postgres + n8n + pb-coach-api
+docker compose up -d --build                    # postgres + pb-coach-api (127.0.0.1:8000)
 docker compose --profile garmin up -d --build   # + pb-coach-sync + garmin-mcp
 docker compose run --rm --build test            # todos los tests, incluidos los de Postgres
 docker compose exec pb-coach-sync python -m sync   # sync manual
