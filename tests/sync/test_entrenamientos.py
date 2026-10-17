@@ -2,6 +2,9 @@
 
 from datetime import date, timedelta
 
+import pytest
+from pydantic import ValidationError
+
 from core.training import ClaseSesion, Intervalos, SesionPlanificada, Terreno, TipoSesion, ZonasFC
 from sync.entrenamientos import sesion_a_entrenamiento
 
@@ -31,7 +34,7 @@ def test_series_por_tiempo_con_calentamiento_y_vuelta_a_la_calma():
         vuelta_calma=timedelta(minutes=10),
         descripcion="Series cortas, la última más rápida.",
     )
-    e = sesion_a_entrenamiento(sesion, origen="PB_coach · plan 3 v5")
+    e = sesion_a_entrenamiento(sesion, origen="PB_coach p3 v5")
 
     assert e["workoutName"] == "PB 20/10 Series"
     assert e["sportType"]["sportTypeKey"] == "running"
@@ -44,7 +47,11 @@ def test_series_por_tiempo_con_calentamiento_y_vuelta_a_la_calma():
     assert (recuperacion["endConditionValue"], recuperacion["zoneNumber"]) == (120.0, 1)
     assert "targetValueOne" not in trabajo  # la zona va en zoneNumber, nunca en targetValueOne
     assert (vuelta["stepType"]["stepTypeKey"], vuelta["endConditionValue"]) == ("cooldown", 600.0)
-    assert e["description"] == "Series cortas, la última más rápida.\nTerreno: Pista\nPB_coach · plan 3 v5"
+    # Jerga habitual del running en cada paso.
+    assert [calentamiento["description"], trabajo["description"], recuperacion["description"], vuelta["description"]] == [
+        "Warmup", "Series", "Rec", "Cooldown"
+    ]
+    assert e["description"] == "Series cortas, la última más rápida.\nPista\nPB_coach p3 v5"
 
 
 def test_fondo_de_trail_lleva_desnivel_y_terreno_en_las_notas():
@@ -65,13 +72,13 @@ def test_fondo_de_trail_lleva_desnivel_y_terreno_en_las_notas():
     calentamiento, principal = _pasos(e)
     assert principal["endConditionValue"] == 70 * 60.0  # 80' - 10' de calentamiento
     assert principal["zoneNumber"] == 2
+    # Notas compactas: caben en la pantalla del reloj.
     assert e["description"].splitlines() == [
         "Sube andando las rampas fuertes; baja suelto.",
-        "Terreno: Sendero técnico",
-        "Desnivel +: 450 m",
-        "Distancia orientativa: 9 km",
+        "Sendero técnico · D+ 450 m · ~9 km",
         "PB_coach",
     ]
+    assert principal["description"] == "Fondo"
 
 
 def test_sesion_solo_por_distancia_usa_un_paso_de_distancia():
@@ -97,3 +104,24 @@ def test_series_sin_recuperacion_solo_tiene_el_paso_de_trabajo():
     )
     (series,) = _pasos(sesion_a_entrenamiento(sesion))
     assert len(series["workoutSteps"]) == 1
+
+
+def test_umbral_se_llama_umbral_y_la_recuperacion_regenerativo():
+    def _sesion(tipo, clase):
+        return SesionPlanificada(fecha=MARTES, clase_sesion=clase, tipo_sesion=tipo, duracion_objetivo=timedelta(minutes=40))
+
+    assert sesion_a_entrenamiento(_sesion(TipoSesion.UMBRAL, ClaseSesion.ESPECIFICO))["workoutName"] == "PB 20/10 Umbral"
+    assert sesion_a_entrenamiento(_sesion(TipoSesion.RECUPERACION, ClaseSesion.RECUPERACION))["workoutName"] == (
+        "PB 20/10 Regenerativo"
+    )
+
+
+def test_una_descripcion_larga_se_rechaza():
+    with pytest.raises(ValidationError):
+        SesionPlanificada(
+            fecha=MARTES,
+            clase_sesion=ClaseSesion.FONDO,
+            tipo_sesion=TipoSesion.BASE,
+            duracion_objetivo=timedelta(minutes=40),
+            descripcion="Mantén la frecuencia cardíaca en la zona de entrenamiento 2 " * 4,
+        )

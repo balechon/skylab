@@ -90,7 +90,7 @@ async def publicar_semana(
                 repo.marcar_retirada(db, previa.id)
             resultado.retirados += 1
 
-    origen = f"PB_coach · plan {plan_id} v{plan.version}"
+    origen = f"PB_coach p{plan_id} v{plan.version}"
     for sesion in sesiones:
         workout_id = await cliente.subir_entrenamiento(sesion_a_entrenamiento(sesion, origen))
         await cliente.programar(workout_id, sesion.fecha)

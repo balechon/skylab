@@ -140,7 +140,9 @@ class SesionPlanificada(BaseModel):
     duracion_objetivo: Optional[timedelta] = None
     zona_fc_objetivo: Optional[ZonasFC] = None
     desnivel_positivo_objetivo_m: Optional[float] = Field(default=None, ge=0)
-    descripcion: Optional[str] = None  # notas: "sube andando las rampas fuertes"
+    # Notas para el reloj: cortas (la pantalla es pequeña) y con notación
+    # compacta: "FC 150-165", "Z2", "D+ 300 m".
+    descripcion: Optional[str] = Field(default=None, max_length=160)
 
     calentamiento: Optional[timedelta] = None
     intervalos: Optional[Intervalos] = None
