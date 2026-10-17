@@ -10,7 +10,7 @@ from agent import servicio
 from persistence import repository as repo
 from persistence.models import EjecucionAgenteFila
 from tests.agent.planes import HOY, contexto_ciclo, plan_valido, resultado_valido
-from tests.agent.test_agente import ClienteFalso, _respuesta, _tool
+from tests.agent.test_agente import ModeloFalso, _respuesta, _tool
 
 ANTERIOR = HOY - timedelta(weeks=1)
 
@@ -24,7 +24,7 @@ def sesiones_db(engine):
 
 
 def _entrega(resultado):
-    return ClienteFalso([_respuesta(_tool("entregar_resultado", "t1", resultado_json=resultado.model_dump_json()))])
+    return ModeloFalso(respuestas=[_respuesta(_tool("entregar_resultado", "t1", resultado_json=resultado.model_dump_json()))])
 
 
 def test_crear_ciclo_guarda_la_version_1_y_la_ejecucion(sesiones_db):
@@ -40,7 +40,7 @@ def test_crear_ciclo_guarda_la_version_1_y_la_ejecucion(sesiones_db):
 
 
 def test_si_el_agente_falla_no_se_guarda_plan_pero_si_la_ejecucion(sesiones_db):
-    sin_entrega = ClienteFalso([_respuesta(stop="max_tokens")])
+    sin_entrega = ModeloFalso(respuestas=[_respuesta(stop="max_tokens")])
     respuesta = servicio.crear_ciclo(sesiones_db, sin_entrega, contexto_ciclo().solicitud, hoy=HOY)
 
     assert respuesta.plan_id is None
@@ -52,7 +52,7 @@ def test_si_el_agente_falla_no_se_guarda_plan_pero_si_la_ejecucion(sesiones_db):
 
 def test_ajuste_sin_plan_vigente(sesiones_db):
     with pytest.raises(servicio.SinPlanVigente):
-        servicio.ajuste_semanal(sesiones_db, ClienteFalso([]), hoy=HOY)
+        servicio.ajuste_semanal(sesiones_db, ModeloFalso(respuestas=[]), hoy=HOY)
 
 
 def test_ajuste_semanal_evalua_la_semana_cerrada_y_guarda_la_version_siguiente(sesiones_db):
@@ -82,7 +82,7 @@ def test_perfil_sin_secuencia_para_el_modo_no_llama_al_modelo(sesiones_db, monke
     monkeypatch.setenv("PB_COACH_PERFILES_DIR", str(tmp_path))
 
     solicitud = contexto_ciclo().solicitud.model_copy(update={"perfil": "sin_bloques"})
-    modelo = ClienteFalso([])
+    modelo = ModeloFalso(respuestas=[])
     with pytest.raises(servicio.PerfilIncompleto, match="no define secuencias_bloques"):
         servicio.crear_ciclo(sesiones_db, modelo, solicitud, hoy=HOY)
     assert modelo.llamadas == []

@@ -10,6 +10,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Any, Optional
 
+from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
@@ -70,7 +71,7 @@ def _registro(ejecucion: EjecucionAgente) -> dict[str, Any]:
 
 
 def crear_ciclo(
-    sesiones_db: sessionmaker, cliente: Any, solicitud: SolicitudCiclo, hoy: Optional[date] = None
+    sesiones_db: sessionmaker, modelo: BaseChatModel, solicitud: SolicitudCiclo, hoy: Optional[date] = None
 ) -> RespuestaServicio:
     hoy = hoy or date.today()
     perfil = cargar_perfil(perfiles_dir() / f"{solicitud.perfil}.yaml")
@@ -83,7 +84,7 @@ def crear_ciclo(
         sesiones=_sesiones_recientes(sesiones_db, hoy),
         solicitud=solicitud,
     )
-    ejecucion = ejecutar_agente(ctx, cliente)
+    ejecucion = ejecutar_agente(ctx, modelo)
     respuesta = RespuestaServicio(ejecucion=ejecucion)
 
     with sesiones_db.begin() as db:
@@ -106,7 +107,7 @@ def crear_ciclo(
     return respuesta
 
 
-def ajuste_semanal(sesiones_db: sessionmaker, cliente: Any, hoy: Optional[date] = None) -> RespuestaServicio:
+def ajuste_semanal(sesiones_db: sessionmaker, modelo: BaseChatModel, hoy: Optional[date] = None) -> RespuestaServicio:
     hoy = hoy or date.today()
     with sesiones_db() as db:
         vigente = repo.plan_vigente(db)
@@ -130,7 +131,7 @@ def ajuste_semanal(sesiones_db: sessionmaker, cliente: Any, hoy: Optional[date] 
         plan_vigente=plan,
         evaluacion=evaluacion,
     )
-    ejecucion = ejecutar_agente(ctx, cliente)
+    ejecucion = ejecutar_agente(ctx, modelo)
     respuesta = RespuestaServicio(ejecucion=ejecucion, plan_id=plan_id, evaluacion=evaluacion)
 
     with sesiones_db.begin() as db:

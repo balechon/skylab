@@ -6,9 +6,11 @@ requires-python = ">=3.12"
 dependencies = [
     "pb-coach-core",
     "pb-coach-persistence",
-    "anthropic>=1",
     "fastapi>=0.115",
     "uvicorn>=0.30",
+    "langgraph>=1.2.16",
+    "langchain>=1.4.6",
+    "langchain-anthropic>=1.7.6",
 ]
 
 [tool.uv.sources]

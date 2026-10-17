@@ -1,7 +1,7 @@
 import pytest
 from fastapi.testclient import TestClient
 
-from agent.api import app, obtener_cliente_llm, obtener_sesiones_db
+from agent.api import app, obtener_modelo, obtener_sesiones_db
 
 TOKEN = "token-de-prueba"
 CABECERA = {"Authorization": f"Bearer {TOKEN}"}
@@ -11,7 +11,7 @@ CABECERA = {"Authorization": f"Bearer {TOKEN}"}
 def cliente(monkeypatch):
     monkeypatch.setenv("PB_COACH_API_TOKEN", TOKEN)
     app.dependency_overrides[obtener_sesiones_db] = lambda: None
-    app.dependency_overrides[obtener_cliente_llm] = lambda: None
+    app.dependency_overrides[obtener_modelo] = lambda: None
     yield TestClient(app)
     app.dependency_overrides.clear()
 

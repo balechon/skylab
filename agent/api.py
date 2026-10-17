@@ -17,13 +17,14 @@ import os
 from functools import lru_cache
 from typing import Any, Optional
 
-import anthropic
 from fastapi import Depends, FastAPI, Header, HTTPException
+from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
 from agent import servicio
 from agent.contexto import SolicitudCiclo
+from agent.modelo import crear_modelo
 from persistence.db import crear_engine, crear_sesiones
 
 app = FastAPI(title="pb-coach")
@@ -36,8 +37,9 @@ def obtener_sesiones_db() -> sessionmaker:
     return crear_sesiones(crear_engine())
 
 
-def obtener_cliente_llm() -> anthropic.Anthropic:
-    return anthropic.Anthropic()
+def obtener_modelo() -> BaseChatModel:
+    # Proveedor y modelo según PB_COACH_MODELO (por defecto Claude Opus 5.5).
+    return crear_modelo()
 
 
 def exigir_token(authorization: Optional[str] = Header(default=None)) -> None:
@@ -93,12 +95,12 @@ def health() -> dict[str, str]:
 def crear_plan(
     solicitud: SolicitudCiclo,
     sesiones_db: sessionmaker = Depends(obtener_sesiones_db),
-    cliente=Depends(obtener_cliente_llm),
+    modelo=Depends(obtener_modelo),
 ) -> RespuestaPlan:
     if not (servicio.perfiles_dir() / f"{solicitud.perfil}.yaml").exists():
         raise HTTPException(status_code=404, detail=f"No existe el perfil {solicitud.perfil}")
     try:
-        return _respuesta(servicio.crear_ciclo(sesiones_db, cliente, solicitud))
+        return _respuesta(servicio.crear_ciclo(sesiones_db, modelo, solicitud))
     except servicio.PerfilIncompleto as error:
         raise HTTPException(status_code=422, detail=str(error))
 
@@ -106,10 +108,10 @@ def crear_plan(
 @app.post("/semana/ajustar", dependencies=[Depends(exigir_token)])
 def ajustar_semana(
     sesiones_db: sessionmaker = Depends(obtener_sesiones_db),
-    cliente=Depends(obtener_cliente_llm),
+    modelo=Depends(obtener_modelo),
 ) -> RespuestaPlan:
     try:
-        respuesta = servicio.ajuste_semanal(sesiones_db, cliente)
+        respuesta = servicio.ajuste_semanal(sesiones_db, modelo)
     except servicio.SinPlanVigente as error:
         raise HTTPException(status_code=409, detail=str(error))
     except servicio.PerfilIncompleto as error:

@@ -1,26 +1,38 @@
-# Bucle del agente: Claude propone, las tools ejecutan el motor y la guardia
-# decide si el resultado se acepta.
+# El agente como grafo de LangGraph: el modelo propone, las tools ejecutan el
+# motor y la guardia (dentro de entregar_resultado) decide si el resultado se
+# acepta.
 #
-# Bucle manual (no el Tool Runner del SDK) para controlar explícitamente:
-# el número de iteraciones, la revisión de cada entrega, los rechazos del
-# modelo (stop_reason "refusal") y las respuestas truncadas, y para poder
-# probarlo con un cliente falso, sin red.
+#   START → modelo ─┬─ pide tools ──▶ herramientas ─┬─ resultado aceptado ─▶ END
+#                   │                               └─ si no ──────────────▶ modelo
+#                   ├─ no pide tools ▶ recordatorio ────────────────────────▶ modelo
+#                   └─ rechazo, truncado o máximo de iteraciones ───────────▶ END
+#
+# El modelo llega como un BaseChatModel de LangChain (ver modelo.py): el grafo
+# no sabe de qué proveedor es. En los tests se usa uno falso, sin red.
 
-from typing import Any, Optional
+import operator
+from typing import Annotated, Any, Optional, TypedDict
 
+from langchain_core.language_models import BaseChatModel
+from langchain_core.messages import AIMessage, AnyMessage, HumanMessage, ToolMessage
+from langgraph.graph import END, START, StateGraph
+from langgraph.graph.message import add_messages
 from pydantic import BaseModel
 
 from agent.contexto import ContextoAgente
 from agent.herramientas import DEFINICIONES, Herramientas
+from agent.modelo import mensaje_sistema, nombre_modelo
 from agent.prompts import SYSTEM, primer_mensaje
 from agent.resultado import ResultadoAgente
 
-MODELO = "claude-opus-5-5"
-MAX_TOKENS = 16000
 MAX_ITERACIONES = 20
 MAX_RECORDATORIOS = 2  # veces que se le recuerda entregar si termina sin hacerlo
 
 RECORDATORIO = "Aún no has entregado el resultado. Termina llamando a entregar_resultado."
+
+# stop_reason de Anthropic / finish_reason de otros proveedores.
+_RECHAZO = {"refusal", "content_filter"}
+_TRUNCADO = {"max_tokens", "length"}
 
 
 class EjecucionAgente(BaseModel):
@@ -29,85 +41,135 @@ class EjecucionAgente(BaseModel):
     detalle: str = ""
     iteraciones: int = 0
     entregas_rechazadas: int = 0
-    modelo: str = MODELO
+    modelo: str = ""
     tokens_entrada: int = 0
     tokens_salida: int = 0
 
 
-def _parametros(mensajes: list[dict[str, Any]]) -> dict[str, Any]:
-    return {
-        "model": MODELO,
-        "max_tokens": MAX_TOKENS,
-        "system": [{"type": "text", "text": SYSTEM, "cache_control": {"type": "ephemeral"}}],
-        "tools": DEFINICIONES,
-        "messages": mensajes,
-        "output_config": {"effort": "high"},
-        # Si un clasificador de seguridad rechaza la petición, la API la
-        # reintenta en el modelo de respaldo que corresponda.
-        "betas": ["server-side-fallback-2026-07-01"],
-        "fallbacks": "default",
-    }
+class EstadoGrafo(TypedDict):
+    messages: Annotated[list[AnyMessage], add_messages]
+    iteraciones: Annotated[int, operator.add]
+    recordatorios: Annotated[int, operator.add]
+    tokens_entrada: Annotated[int, operator.add]
+    tokens_salida: Annotated[int, operator.add]
+    fin: Optional[str]
+    detalle: str
 
 
-def ejecutar_agente(ctx: ContextoAgente, cliente: Any, max_iteraciones: int = MAX_ITERACIONES) -> EjecucionAgente:
-    """Corre el agente sobre un contexto. `cliente` es un anthropic.Anthropic
-    (o un falso con el mismo `beta.messages.create`)."""
+def _motivo_parada(respuesta: AIMessage) -> Optional[str]:
+    meta = respuesta.response_metadata or {}
+    return meta.get("stop_reason") or meta.get("finish_reason")
+
+
+def construir_grafo(ctx: ContextoAgente, modelo: BaseChatModel, nombre: str, max_iteraciones: int = MAX_ITERACIONES):
+    """Grafo compilado para un contexto, y las herramientas (que guardan el
+    resultado aceptado por la guardia)."""
     herramientas = Herramientas(ctx)
-    mensajes: list[dict[str, Any]] = [{"role": "user", "content": primer_mensaje(ctx)}]
-    ejecucion = EjecucionAgente(estado="sin_resultado")
-    recordatorios = 0
+    modelo_con_tools = modelo.bind_tools(DEFINICIONES, strict=True)
+    sistema = mensaje_sistema(SYSTEM, nombre)
 
-    for iteracion in range(1, max_iteraciones + 1):
-        ejecucion.iteraciones = iteracion
-        respuesta = cliente.beta.messages.create(**_parametros(mensajes))
-        uso = respuesta.usage
-        ejecucion.tokens_entrada += (
-            uso.input_tokens + (uso.cache_read_input_tokens or 0) + (uso.cache_creation_input_tokens or 0)
-        )
-        ejecucion.tokens_salida += uso.output_tokens
+    def llamar_modelo(estado: EstadoGrafo) -> dict[str, Any]:
+        respuesta = modelo_con_tools.invoke([sistema, *estado["messages"]])
+        uso = respuesta.usage_metadata or {}
+        cambios: dict[str, Any] = {
+            # La respuesta se añade tal cual (con sus bloques de razonamiento):
+            # el historial solo crece, nunca se edita.
+            "messages": [respuesta],
+            "iteraciones": 1,
+            "tokens_entrada": uso.get("input_tokens", 0),  # incluye lectura y escritura de caché
+            "tokens_salida": uso.get("output_tokens", 0),
+        }
+        motivo = _motivo_parada(respuesta)
+        if motivo in _RECHAZO:
+            detalle = (respuesta.response_metadata or {}).get("stop_details") or motivo
+            cambios.update(fin="rechazo_modelo", detalle=str(detalle))
+        elif motivo in _TRUNCADO:
+            cambios.update(fin="respuesta_truncada", detalle="La respuesta superó el máximo de tokens.")
+        return cambios
 
-        if respuesta.stop_reason == "refusal":
-            ejecucion.estado = "rechazo_modelo"
-            ejecucion.detalle = str(getattr(respuesta, "stop_details", "") or "")
-            break
-        if respuesta.stop_reason == "max_tokens":
-            ejecucion.estado = "respuesta_truncada"
-            ejecucion.detalle = f"La respuesta superó {MAX_TOKENS} tokens."
-            break
-
-        # Se añade la respuesta tal cual (incluidos los bloques de thinking):
-        # el historial solo crece, nunca se edita.
-        mensajes.append({"role": "assistant", "content": respuesta.content})
-
-        llamadas = [b for b in respuesta.content if b.type == "tool_use"]
-        if not llamadas:
-            if recordatorios >= MAX_RECORDATORIOS:
-                ejecucion.detalle = "El modelo terminó sin entregar el resultado."
-                break
-            recordatorios += 1
-            mensajes.append({"role": "user", "content": RECORDATORIO})
-            continue
-
-        resultados = []
-        for llamada in llamadas:
-            salida = herramientas.ejecutar(llamada.name, dict(llamada.input))
-            resultados.append(
-                {
-                    "type": "tool_result",
-                    "tool_use_id": llamada.id,
-                    "content": salida.contenido,
-                    "is_error": salida.es_error,
-                }
+    def ejecutar_herramientas(estado: EstadoGrafo) -> dict[str, Any]:
+        ultima: AIMessage = estado["messages"][-1]
+        # Todos los resultados de un turno se devuelven juntos.
+        mensajes = []
+        for llamada in ultima.tool_calls:
+            salida = herramientas.ejecutar(llamada["name"], dict(llamada["args"]))
+            mensajes.append(
+                ToolMessage(
+                    content=salida.contenido,
+                    tool_call_id=llamada["id"],
+                    status="error" if salida.es_error else "success",
+                )
             )
-        # Todos los resultados de un turno van en un único mensaje.
-        mensajes.append({"role": "user", "content": resultados})
+        return {"messages": mensajes}
 
-        if herramientas.resultado_aceptado is not None:
-            ejecucion.resultado = herramientas.resultado_aceptado
-            ejecucion.estado = "aceptado"
-            break
-    else:
+    def recordar(estado: EstadoGrafo) -> dict[str, Any]:
+        return {"messages": [HumanMessage(RECORDATORIO)], "recordatorios": 1}
+
+    def tras_modelo(estado: EstadoGrafo) -> str:
+        if estado.get("fin"):
+            return END
+        if estado["messages"][-1].tool_calls:
+            return "herramientas"
+        if estado["iteraciones"] >= max_iteraciones or estado["recordatorios"] >= MAX_RECORDATORIOS:
+            return END
+        return "recordatorio"
+
+    def tras_herramientas(estado: EstadoGrafo) -> str:
+        if herramientas.resultado_aceptado is not None or estado["iteraciones"] >= max_iteraciones:
+            return END
+        return "modelo"
+
+    grafo = StateGraph(EstadoGrafo)
+    grafo.add_node("modelo", llamar_modelo)
+    grafo.add_node("herramientas", ejecutar_herramientas)
+    grafo.add_node("recordatorio", recordar)
+    grafo.add_edge(START, "modelo")
+    grafo.add_conditional_edges("modelo", tras_modelo, ["herramientas", "recordatorio", END])
+    grafo.add_conditional_edges("herramientas", tras_herramientas, ["modelo", END])
+    grafo.add_edge("recordatorio", "modelo")
+    return grafo.compile(), herramientas
+
+
+def ejecutar_agente(
+    ctx: ContextoAgente,
+    modelo: BaseChatModel,
+    max_iteraciones: int = MAX_ITERACIONES,
+    nombre: Optional[str] = None,
+) -> EjecucionAgente:
+    """Corre el agente sobre un contexto con el modelo dado (de cualquier
+    proveedor; en los tests, uno falso)."""
+    nombre = nombre or nombre_modelo()
+    grafo, herramientas = construir_grafo(ctx, modelo, nombre, max_iteraciones)
+    final = grafo.invoke(
+        {
+            "messages": [HumanMessage(primer_mensaje(ctx))],
+            "iteraciones": 0,
+            "recordatorios": 0,
+            "tokens_entrada": 0,
+            "tokens_salida": 0,
+            "fin": None,
+            "detalle": "",
+        },
+        # Cada iteración son ~2 pasos del grafo; margen de sobra.
+        {"recursion_limit": 4 * max_iteraciones + 10},
+    )
+
+    ejecucion = EjecucionAgente(
+        estado="sin_resultado",
+        iteraciones=final["iteraciones"],
+        entregas_rechazadas=herramientas.entregas_rechazadas,
+        modelo=nombre,
+        tokens_entrada=final["tokens_entrada"],
+        tokens_salida=final["tokens_salida"],
+    )
+    if herramientas.resultado_aceptado is not None:
+        ejecucion.resultado = herramientas.resultado_aceptado
+        ejecucion.estado = "aceptado"
+    elif final.get("fin"):
+        ejecucion.estado = final["fin"]
+        ejecucion.detalle = final["detalle"]
+    elif final["iteraciones"] >= max_iteraciones:
         ejecucion.detalle = f"Se alcanzó el máximo de {max_iteraciones} iteraciones sin un resultado aceptado."
-
-    ejecucion.entregas_rechazadas = herramientas.entregas_rechazadas
+    else:
+        ejecucion.detalle = "El modelo terminó sin entregar el resultado."
     return ejecucion

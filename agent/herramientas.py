@@ -23,11 +23,12 @@ SEMANAS_HISTORIAL_MAX = 16
 
 
 def _definicion(nombre: str, descripcion: str, propiedades: dict[str, Any]) -> dict[str, Any]:
+    # Formato neutro (name / description / parameters) que LangChain traduce
+    # al de cada proveedor; `strict` se pide al enlazar las tools al modelo.
     return {
         "name": nombre,
         "description": descripcion,
-        "strict": True,
-        "input_schema": {
+        "parameters": {
             "type": "object",
             "properties": propiedades,
             "required": list(propiedades),

@@ -468,3 +468,23 @@ de cron y de aviso; la parte valiosa del proyecto —planificar y publicar en
 el reloj— vive en el código. Sin n8n el stack es más simple y la
 programación se decidirá aparte (p. ej. dentro de la API o con el cron del
 VPS).
+
+## 2026-10-17 — El agente pasa a LangGraph, independiente del proveedor
+
+**Decisión**: el bucle manual sobre el SDK de Anthropic se reemplaza por un
+grafo de LangGraph (`agent/agente.py`: nodos modelo, herramientas y
+recordatorio) y el modelo llega como `BaseChatModel` de LangChain. El modelo
+se elige con `PB_COACH_MODELO` ("proveedor:modelo", por defecto
+`anthropic:claude-opus-5-5`); lo específico de cada proveedor vive solo en
+`agent/modelo.py` (en Anthropic: `effort` alto, `fallbacks: "default"` y caché
+del system). Las tools se definen en formato neutro y se enlazan con
+`strict=True`. No cambian las tools, la guardia, el contexto, el servicio, la
+API ni la persistencia; el contrato sigue siendo `ejecutar_agente(ctx, modelo)
+→ EjecucionAgente`. Los tests usan un `BaseChatModel` falso.
+
+**Por qué**: LangGraph es un estándar de la industria y permite cambiar de
+modelo o proveedor sin tocar el agente. Además deja la puerta abierta a
+pausas con checkpoints en Postgres (p. ej. aprobar el plan antes de
+publicarlo en el reloj). Se acepta que es algo de sobreingeniería para el
+flujo actual, lineal, y el coste: la imagen de la API pasa de 388 MB a
+462 MB. Con otro proveedor, las opciones exclusivas de Anthropic se pierden.
