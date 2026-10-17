@@ -23,7 +23,8 @@ servicios responden 503.
   (y `"carrera"` en modo Competición) → crea un ciclo nuevo. 404 si el perfil
   no existe; 422 si el perfil no define la secuencia de bloques del modo.
 - `POST /semana/ajustar` → evalúa la semana cerrada y crea la versión
-  siguiente del plan vigente. 409 si no hay plan activo.
+  siguiente del plan vigente. 409 si no hay plan activo, o si esa semana ya
+  se ajustó (no se vuelve a llamar al modelo; `?forzar=true` para rehacerla).
 - Ambos responden `{estado, resumen, plan_id, version, accion,
   justificaciones, violaciones, detalle, tokens_entrada, tokens_salida}`.
 

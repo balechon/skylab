@@ -32,6 +32,10 @@ class SinPlanVigente(RuntimeError):
     pass
 
 
+class AjusteYaHecho(RuntimeError):
+    """La semana cerrada ya se ajustó: repetir el ciclo no vuelve a llamar al modelo."""
+
+
 class PerfilIncompleto(RuntimeError):
     """El perfil no tiene lo necesario para planificar sin inventar."""
 
@@ -106,7 +110,12 @@ def crear_ciclo(
     return respuesta
 
 
-def ajuste_semanal(sesiones_db: sessionmaker, modelo: BaseChatModel, hoy: Optional[date] = None) -> RespuestaServicio:
+def ajuste_semanal(
+    sesiones_db: sessionmaker, modelo: BaseChatModel, hoy: Optional[date] = None, forzar: bool = False
+) -> RespuestaServicio:
+    """Ajusta el plan a partir de la última semana cerrada. Si esa semana ya
+    se ajustó (p. ej. el ciclo se lanzó dos veces), no llama al modelo y
+    lanza AjusteYaHecho, salvo que se pida `forzar`."""
     hoy = hoy or date.today()
     with sesiones_db() as db:
         vigente = repo.plan_vigente(db)
@@ -119,6 +128,15 @@ def ajuste_semanal(sesiones_db: sessionmaker, modelo: BaseChatModel, hoy: Option
     _exigir_secuencia(perfil, nombre_perfil, plan.modo)
     sesiones = _sesiones_recientes(sesiones_db, hoy)
     cerrado = _ultimo_microciclo_cerrado(plan, hoy)
+    semana = cerrado.fecha_inicio if cerrado else None
+    if semana is not None and not forzar:
+        with sesiones_db() as db:
+            version = repo.ajuste_aceptado(db, plan_id, semana)
+        if version is not None:
+            raise AjusteYaHecho(
+                f"La semana del {semana} ya se ajustó (versión {version} del plan {plan_id}). "
+                "Usa forzar para rehacerlo."
+            )
     evaluacion = evaluar_semana(cerrado, sesiones, perfil) if cerrado else None
 
     ctx = ContextoAgente(
@@ -150,5 +168,6 @@ def ajuste_semanal(sesiones_db: sessionmaker, modelo: BaseChatModel, hoy: Option
             modelo=ejecucion.modelo,
             tokens_entrada=ejecucion.tokens_entrada,
             tokens_salida=ejecucion.tokens_salida,
+            semana=semana,
         )
     return respuesta

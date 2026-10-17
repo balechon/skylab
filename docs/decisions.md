@@ -502,3 +502,22 @@ resultado.py). Los prompts se mantienen separados de `llm.py`.
 para cualquier proveedor; `llm.py` cambia al cambiar de proveedor. "Modelo"
 también significa modelo de datos en este proyecto, de ahí `llm.py`. Regla
 general: lo que funcionaría igual sin un LLM no va en `agent/`.
+
+## 2026-10-17 — Bloque en curso completo y ajuste semanal idempotente
+
+**Decisión**:
+- La guardia exige que el mesociclo en curso tenga todas sus semanas
+  definidas (nivel 2 como mínimo), sin huecos, de su primer a su último día.
+  Al entrar en un bloque nuevo, el agente está obligado a pasarlo de
+  esqueleto a semanas con objetivos; los bloques futuros pueden seguir siendo
+  esqueleto.
+- Cada ajuste semanal registra la semana cerrada que evaluó
+  (`ejecucion_agente.semana`, migración 0004). Si esa semana ya tiene un
+  ajuste aceptado, `POST /semana/ajustar` responde 409 sin llamar al modelo;
+  `?forzar=true` lo rehace. Un ajuste fallido no cuenta como hecho.
+
+**Por qué**: antes, el paso de un bloque al siguiente dependía solo del
+prompt. Y cuando el ciclo semanal se programe, lanzarlo dos veces (un
+reintento, un cron duplicado) no debe generar dos versiones ni gastar
+tokens. Sigue pendiente: si un domingo no se ejecuta, la semana anterior no
+se evalúa (solo se evalúa la última cerrada).

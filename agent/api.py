@@ -3,7 +3,8 @@
 #
 #   GET  /health            sin autenticación (healthcheck)
 #   POST /plan              crear un ciclo nuevo
-#   POST /semana/ajustar    ajuste semanal del plan vigente
+#   POST /semana/ajustar    ajuste semanal del plan vigente (?forzar=true para
+#                           rehacer una semana ya ajustada)
 #
 # Garmin es otro servicio (pb-coach-sync): el sync se llama antes y la
 # publicación en el reloj después. Esta API no depende de MCP; trabaja con lo
@@ -107,12 +108,13 @@ def crear_plan(
 
 @app.post("/semana/ajustar", dependencies=[Depends(exigir_token)])
 def ajustar_semana(
+    forzar: bool = False,
     sesiones_db: sessionmaker = Depends(obtener_sesiones_db),
     modelo=Depends(obtener_modelo),
 ) -> RespuestaPlan:
     try:
-        respuesta = servicio.ajuste_semanal(sesiones_db, modelo)
-    except servicio.SinPlanVigente as error:
+        respuesta = servicio.ajuste_semanal(sesiones_db, modelo, forzar=forzar)
+    except (servicio.SinPlanVigente, servicio.AjusteYaHecho) as error:
         raise HTTPException(status_code=409, detail=str(error))
     except servicio.PerfilIncompleto as error:
         raise HTTPException(status_code=422, detail=str(error))

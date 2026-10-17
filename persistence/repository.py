@@ -147,9 +147,11 @@ def registrar_ejecucion(
     modelo: Optional[str] = None,
     tokens_entrada: Optional[int] = None,
     tokens_salida: Optional[int] = None,
+    semana: Optional[date] = None,
 ) -> int:
     fila = EjecucionAgenteFila(
         operacion=operacion,
+        semana=semana,
         estado=estado,
         resultado=resultado,
         plan_version_id=plan_version_id,
@@ -214,4 +216,20 @@ def marcar_retirada(db: Session, publicacion_id: int) -> None:
         update(PublicacionGarminFila)
         .where(PublicacionGarminFila.id == publicacion_id)
         .values(retirado_en=datetime.now(timezone.utc))
+    )
+
+
+def ajuste_aceptado(db: Session, plan_id: int, semana: date) -> Optional[int]:
+    """Versión del plan producida por un ajuste semanal ya aceptado para esa
+    semana cerrada, o None si todavía no se ajustó."""
+    return db.scalar(
+        select(PlanVersionFila.version)
+        .join(EjecucionAgenteFila, EjecucionAgenteFila.plan_version_id == PlanVersionFila.id)
+        .where(
+            PlanVersionFila.plan_id == plan_id,
+            EjecucionAgenteFila.operacion == "ajuste_semanal",
+            EjecucionAgenteFila.semana == semana,
+        )
+        .order_by(PlanVersionFila.version.desc())
+        .limit(1)
     )

@@ -8,7 +8,9 @@
 # pasadas no se tocan.
 
 from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, ResultadoAgente
-from core.training import Microciclo, Plan
+from datetime import timedelta
+
+from core.training import Mesociclo, Microciclo, Plan
 from core.validator import validar_plan
 
 _MAX_VIOLACIONES_LISTADAS = 10
@@ -52,6 +54,36 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
     elif not proxima.detallado:
         problemas.append(
             f"La semana del {proxima.fecha_inicio} es la próxima y debe tener sesiones concretas (nivel 1)."
+        )
+    problemas += _revisar_bloque_actual(plan, ctx)
+    return problemas
+
+
+def _revisar_bloque_actual(plan: Plan, ctx: ContextoAgente) -> list[str]:
+    """El mesociclo en curso debe tener todas sus semanas definidas (nivel 2
+    como mínimo), sin huecos, de su primer a su último día. Así, al entrar en
+    un bloque nuevo, deja de ser esqueleto. Los bloques futuros pueden seguir
+    siendo esqueleto (nivel 3)."""
+    actual: Mesociclo | None = next((m for m in plan.mesociclos if m.fecha_fin >= ctx.hoy), None)
+    if actual is None:
+        return []
+    if not actual.microciclos:
+        return [
+            f"El bloque en curso ({actual.objetivo.value}, {actual.fecha_inicio} – {actual.fecha_fin}) "
+            "es solo esqueleto: debe tener sus semanas con objetivos (nivel 2)."
+        ]
+    problemas = []
+    esperado = actual.fecha_inicio
+    for micro in actual.microciclos:
+        if micro.fecha_inicio != esperado:
+            problemas.append(
+                f"El bloque {actual.objetivo.value} no tiene semanas definidas entre {esperado} y "
+                f"{micro.fecha_inicio - timedelta(days=1)}."
+            )
+        esperado = micro.fecha_fin + timedelta(days=1)
+    if esperado <= actual.fecha_fin:
+        problemas.append(
+            f"El bloque {actual.objetivo.value} no tiene semanas definidas entre {esperado} y {actual.fecha_fin}."
         )
     return problemas
 

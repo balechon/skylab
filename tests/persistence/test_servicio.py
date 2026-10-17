@@ -86,3 +86,38 @@ def test_perfil_sin_secuencia_para_el_modo_no_llama_al_modelo(sesiones_db, monke
     with pytest.raises(servicio.PerfilIncompleto, match="no define secuencias_bloques"):
         servicio.crear_ciclo(sesiones_db, modelo, solicitud, hoy=HOY)
     assert modelo.llamadas == []
+
+
+def test_la_misma_semana_no_se_ajusta_dos_veces(sesiones_db):
+    vigente = plan_valido(version=1, primera=ANTERIOR, detallar=0)
+    with sesiones_db.begin() as db:
+        repo.crear_plan(db, vigente, perfil="ejemplo_didactico")
+
+    def ajuste(version):
+        plan = plan_valido(version=version, primera=ANTERIOR, detallar=1)
+        plan.mesociclos[0].microciclos[0] = vigente.mesociclos[0].microciclos[0]
+        regla_ids = ["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001"]
+        return _entrega(resultado_valido(plan, regla_ids=regla_ids))
+
+    primero = servicio.ajuste_semanal(sesiones_db, ajuste(2), hoy=HOY)
+    assert primero.version == 2
+
+    # El ciclo se lanza otra vez el mismo día: no se llama al modelo.
+    sin_llamadas = ModeloFalso(respuestas=[])
+    with pytest.raises(servicio.AjusteYaHecho, match=rf"La semana del {ANTERIOR} ya se ajustó \(versión 2"):
+        servicio.ajuste_semanal(sesiones_db, sin_llamadas, hoy=HOY)
+    assert sin_llamadas.llamadas == []
+
+    # Pidiéndolo explícitamente, se rehace.
+    assert servicio.ajuste_semanal(sesiones_db, ajuste(3), hoy=HOY, forzar=True).version == 3
+
+
+def test_un_ajuste_fallido_no_cuenta_como_hecho(sesiones_db):
+    with sesiones_db.begin() as db:
+        repo.crear_plan(db, plan_valido(version=1, primera=ANTERIOR, detallar=0), perfil="ejemplo_didactico")
+
+    servicio.ajuste_semanal(sesiones_db, ModeloFalso(respuestas=[_respuesta(stop="max_tokens")]), hoy=HOY)
+    # El primer intento no produjo plan: el segundo sí puede ajustar la semana.
+    otro = ModeloFalso(respuestas=[_respuesta(stop="max_tokens")])
+    servicio.ajuste_semanal(sesiones_db, otro, hoy=HOY)
+    assert len(otro.llamadas) == 1

@@ -98,6 +98,9 @@ class EjecucionAgenteFila(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     operacion: Mapped[str] = mapped_column(String(30))  # crear_ciclo | ajuste_semanal
+    # En el ajuste semanal: lunes de la semana cerrada que se evaluó. Evita
+    # ajustar dos veces la misma semana si el ciclo se lanza de nuevo.
+    semana: Mapped[Optional[date]] = mapped_column(Date)
     estado: Mapped[str] = mapped_column(String(30))
     plan_version_id: Mapped[Optional[int]] = mapped_column(ForeignKey("plan_version.id"))
     modelo: Mapped[Optional[str]] = mapped_column(String(60))

@@ -132,3 +132,33 @@ def test_sin_secuencia_para_el_modo_se_rechaza():
     perfil = PERFIL.model_copy(update={"secuencias_bloques": []})
     problemas = revisar_resultado(resultado_valido(regla_ids=["EJEMPLO-PROGRESION-001"]), contexto_ciclo(perfil=perfil))
     assert any("no define la secuencia de bloques" in p for p in problemas)
+
+
+# ---------- el bloque en curso, completo ----------
+
+def test_un_bloque_futuro_puede_seguir_siendo_esqueleto():
+    # plan_valido(): Base con sus 4 semanas y Fuerza como esqueleto.
+    assert revisar_resultado(resultado_valido(), contexto_ciclo()) == []
+
+
+def test_al_entrar_en_un_bloque_esqueleto_se_rechaza():
+    # Cuatro semanas después, el bloque en curso es Fuerza, que sigue siendo esqueleto.
+    plan = plan_valido()
+    ctx = contexto_ciclo(hoy=plan.mesociclos[1].fecha_inicio)
+    problemas = revisar_resultado(resultado_valido(plan), ctx)
+    assert any("es solo esqueleto" in p and "Fuerza y economía" in p for p in problemas)
+
+
+def test_un_hueco_en_el_bloque_en_curso_se_rechaza():
+    plan = plan_valido()
+    del plan.mesociclos[0].microciclos[2]  # falta la tercera semana de Base
+    problemas = revisar_resultado(resultado_valido(plan), contexto_ciclo())
+    tercera = plan.mesociclos[0].fecha_inicio + timedelta(weeks=2)
+    assert any(f"no tiene semanas definidas entre {tercera}" in p for p in problemas)
+
+
+def test_las_ultimas_semanas_sin_definir_se_rechazan():
+    plan = plan_valido()
+    del plan.mesociclos[0].microciclos[-1]  # falta la descarga, la última semana del bloque
+    problemas = revisar_resultado(resultado_valido(plan), contexto_ciclo())
+    assert any(f"y {plan.mesociclos[0].fecha_fin}" in p for p in problemas)
