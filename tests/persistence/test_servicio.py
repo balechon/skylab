@@ -10,7 +10,7 @@ from agent import servicio
 from persistence import repository as repo
 from persistence.models import EjecucionAgenteFila
 from tests.agent.planes import HOY, contexto_ciclo, plan_valido, resultado_valido
-from tests.agent.test_agente import ModeloFalso, _respuesta, _tool
+from tests.agent.test_grafo import ModeloFalso, _respuesta, _tool
 
 ANTERIOR = HOY - timedelta(weeks=1)
 

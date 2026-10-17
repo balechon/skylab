@@ -488,3 +488,17 @@ pausas con checkpoints en Postgres (p. ej. aprobar el plan antes de
 publicarlo en el reloj). Se acepta que es algo de sobreingeniería para el
 flujo actual, lineal, y el coste: la imagen de la API pasa de 388 MB a
 462 MB. Con otro proveedor, las opciones exclusivas de Anthropic se pierden.
+
+## 2026-10-17 — Estructura estándar del módulo agent
+
+**Decisión**: `agent/` queda con un archivo por razón de cambio, como en la
+mayoría de proyectos con LangGraph: `api.py` (HTTP), `servicio.py` (cargar
+contexto → grafo → guardar), `grafo.py` (antes agente.py), `herramientas.py`,
+`guardia.py`, `prompts.py`, `llm.py` (antes modelo.py: proveedor y opciones)
+y `esquemas.py` (contratos de entrada y salida; antes contexto.py y
+resultado.py). Los prompts se mantienen separados de `llm.py`.
+
+**Por qué**: los prompts cambian al ajustar el comportamiento y deben valer
+para cualquier proveedor; `llm.py` cambia al cambiar de proveedor. "Modelo"
+también significa modelo de datos en este proyecto, de ahí `llm.py`. Regla
+general: lo que funcionaría igual sin un LLM no va en `agent/`.

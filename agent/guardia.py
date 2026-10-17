@@ -7,8 +7,7 @@
 # perfil, la acción de ajuste debe ser la que decidió el motor y las semanas
 # pasadas no se tocan.
 
-from agent.contexto import ContextoAgente, ids_del_perfil
-from agent.resultado import EstadoResultado, Operacion, ResultadoAgente
+from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, ResultadoAgente
 from core.training import Microciclo, Plan
 from core.validator import validar_plan
 
@@ -23,7 +22,7 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
     """Lista de problemas; vacía si el resultado se puede aceptar."""
     problemas: list[str] = []
 
-    ids = ids_del_perfil(ctx.perfil)
+    ids = set(ctx.perfil.todos_los_ids())
     citados = {rid for j in resultado.justificaciones for rid in j.regla_ids}
     citados |= {v.regla_id for v in resultado.violaciones}
     inventados = sorted(citados - ids)

@@ -5,8 +5,7 @@
 from datetime import date, timedelta
 from pathlib import Path
 
-from agent.contexto import ContextoAgente, SolicitudCiclo
-from agent.resultado import EstadoResultado, Justificacion, Operacion, ResultadoAgente
+from agent.esquemas import ContextoAgente, EstadoResultado, Justificacion, Operacion, ResultadoAgente, SolicitudCiclo
 from core.training import (
     ClaseSesion,
     Intervalos,

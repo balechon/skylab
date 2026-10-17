@@ -10,7 +10,7 @@ from langchain_core.messages import AIMessage, SystemMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
 from pydantic import Field
 
-from agent.agente import MAX_RECORDATORIOS, ejecutar_agente
+from agent.grafo import MAX_RECORDATORIOS, ejecutar_agente
 from agent.herramientas import Herramientas
 from tests.agent.planes import contexto_ciclo, plan_valido, resultado_valido
 

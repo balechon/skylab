@@ -4,8 +4,7 @@
 
 import json
 
-from agent.contexto import ContextoAgente
-from agent.resultado import Operacion, ResultadoAgente
+from agent.esquemas import ContextoAgente, Operacion, ResultadoAgente
 
 SYSTEM = f"""Eres el planificador de PB_coach, un coach de running y trail para un único atleta: un corredor de trail que usa sesiones de velocidad para rendir mejor en montaña.
 

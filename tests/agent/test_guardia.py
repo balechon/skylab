@@ -1,8 +1,7 @@
 from datetime import timedelta
 
-from agent.contexto import ContextoAgente
+from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, ResultadoAgente
 from agent.guardia import revisar_resultado
-from agent.resultado import EstadoResultado, Operacion, ResultadoAgente
 from core.methodology import AccionAjuste, MetricaAjuste
 from core.training import ModoPlan, ObjetivoMesociclo
 from core.calculator import resumir_periodo

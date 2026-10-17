@@ -23,8 +23,8 @@ from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
 from agent import servicio
-from agent.contexto import SolicitudCiclo
-from agent.modelo import crear_modelo
+from agent.esquemas import SolicitudCiclo
+from agent.llm import crear_modelo
 from persistence.db import crear_engine, crear_sesiones
 
 app = FastAPI(title="pb-coach")

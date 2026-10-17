@@ -12,9 +12,8 @@ from typing import Any, Optional
 
 from pydantic import BaseModel, ValidationError
 
-from agent.contexto import ContextoAgente
+from agent.esquemas import ContextoAgente, Operacion, ResultadoAgente
 from agent.guardia import revisar_resultado
-from agent.resultado import Operacion, ResultadoAgente
 from core.training import Plan
 from core.calculator import inicio_de_semana, resumir_semanas
 from core.validator import validar_plan

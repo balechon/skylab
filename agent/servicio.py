@@ -14,9 +14,8 @@ from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
-from agent.agente import EjecucionAgente, ejecutar_agente
-from agent.contexto import ContextoAgente, SolicitudCiclo
-from agent.resultado import EstadoResultado, Operacion
+from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, SolicitudCiclo
+from agent.grafo import EjecucionAgente, ejecutar_agente
 from core.training import Microciclo, Plan
 from core.deviation import EvaluacionSemana, evaluar_semana
 from core.loader import cargar_perfil

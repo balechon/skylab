@@ -7,7 +7,7 @@
 #                   ├─ no pide tools ▶ recordatorio ────────────────────────▶ modelo
 #                   └─ rechazo, truncado o máximo de iteraciones ───────────▶ END
 #
-# El modelo llega como un BaseChatModel de LangChain (ver modelo.py): el grafo
+# El modelo llega como un BaseChatModel de LangChain (ver llm.py): el grafo
 # no sabe de qué proveedor es. En los tests se usa uno falso, sin red.
 
 import operator
@@ -19,11 +19,10 @@ from langgraph.graph import END, START, StateGraph
 from langgraph.graph.message import add_messages
 from pydantic import BaseModel
 
-from agent.contexto import ContextoAgente
+from agent.esquemas import ContextoAgente, ResultadoAgente
 from agent.herramientas import DEFINICIONES, Herramientas
-from agent.modelo import mensaje_sistema, nombre_modelo
+from agent.llm import mensaje_sistema, nombre_modelo
 from agent.prompts import SYSTEM, primer_mensaje
-from agent.resultado import ResultadoAgente
 
 MAX_ITERACIONES = 20
 MAX_RECORDATORIOS = 2  # veces que se le recuerda entregar si termina sin hacerlo
