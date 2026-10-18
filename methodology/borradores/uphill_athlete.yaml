@@ -30,8 +30,8 @@
 #   fuera_del_modelo, propuestas_propias
 #       → secciones nuevas: el modelo todavía no las acepta.
 #
-# Figuras: incorporadas la 3.3, 10.1–10.3, 11.8–11.10 y 13.1–13.6.
-#   PENDIENTE: la 11.7 (primer 50K, Cat. 1). Las de skimo no aplican.
+# Figuras incorporadas: 3.3, 10.1–10.3, 11.7–11.10 y 13.1–13.6. Las de
+# skimo no aplican.
 
 autor: "UPHILL_ATHLETE"
 fuente: "House, Johnston y Jornet. Training for the Uphill Athlete. Patagonia Works, 2019. ISBN 978-1-938340-84-0"
@@ -488,6 +488,9 @@ semanas_ejemplo:
 # recuperación en torno al 45–65 % de la semana anterior, semanas S antes de
 # la carrera A y taper de 1–3 semanas T.
 macrociclos_ejemplo:
+  - id: "UA-MACRO-50K-CAT1"
+    fuente: "cap. 11, fig. 11.7 (Cat. 1, primer 50K; también sirve para un objetivo personal de distancia parecida). Parte de semanas de 40 km y llega a un pico de 80, en línea con UA-CARGA-003"
+    semanas: "B40 B43 B48 R29 | B51 B55 B60 R32 | B56 I61 I66 R37 | S72 S77 R39 | S77 S80 | T56 T35 G68(50K, A)"
   - id: "UA-MACRO-100K"
     fuente: "cap. 11, fig. 11.8 (Cat. 2, una A de 100K con una B de 50K; también para Cat. 1 en su segunda temporada)"
     semanas: "B48 B51 B60 R32 | B61 B69 B74 R45 | I63? I71 I77 R48 | I80 I87 I95 R48 | S103 S113 T48 G80(50K, B) | R48 I108? S116 S125 | T89 T72 T48 G110(100K, A)"
