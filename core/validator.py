@@ -132,8 +132,9 @@ def _max_carga_consecutiva(plan: Plan, regla_id: str, maximo: int) -> list[Viola
 
 
 def _reduccion_descarga(plan: Plan, regla: RegistroRegla, minimo: float, maximo: float) -> list[Violacion]:
-    """Cada semana de descarga baja el volumen entre `minimo` y `maximo` %
-    respecto a la última semana de carga anterior."""
+    """Cada semana de descarga baja el volumen (y el desnivel, si ambas
+    semanas lo fijan) entre `minimo` y `maximo` % respecto a la última
+    semana de carga anterior."""
     violaciones = []
     referencia: Optional[Microciclo] = None
     for micro, meso in _microciclos(plan):
@@ -144,22 +145,71 @@ def _reduccion_descarga(plan: Plan, regla: RegistroRegla, minimo: float, maximo:
             continue
         if not _aplica_a_semana(regla, micro, meso):
             continue
+        medidas = []
         comparable = _volumen_comparable(referencia, micro)
-        cambio = variacion_pct(comparable[1], comparable[2]) if comparable else None
-        if cambio is None:
-            continue
-        reduccion = -cambio
-        if not minimo <= reduccion <= maximo:
-            violaciones.append(
-                Violacion(
-                    regla_id=regla.id,
-                    fecha=micro.fecha_inicio,
-                    mensaje=(
-                        f"La descarga del {micro.fecha_inicio} baja la {comparable[0]} un {reduccion:g}% respecto a "
-                        f"la semana de carga del {referencia.fecha_inicio}; debe bajar entre {minimo:g} y {maximo:g}%."
-                    ),
+        if comparable is not None:
+            medidas.append(comparable)
+        if referencia.objetivos.desnivel_positivo_m and micro.objetivos.desnivel_positivo_m is not None:
+            medidas.append(("el desnivel", referencia.objetivos.desnivel_positivo_m, micro.objetivos.desnivel_positivo_m))
+        for unidad, anterior, actual in medidas:
+            cambio = variacion_pct(anterior, actual)
+            if cambio is None:
+                continue
+            reduccion = -cambio
+            if not minimo <= reduccion <= maximo:
+                violaciones.append(
+                    Violacion(
+                        regla_id=regla.id,
+                        fecha=micro.fecha_inicio,
+                        mensaje=(
+                            f"La descarga del {micro.fecha_inicio} baja {_articulo(unidad)} un {reduccion:g}% respecto a "
+                            f"la semana de carga del {referencia.fecha_inicio}; debe bajar entre {minimo:g} y {maximo:g}%."
+                        ),
+                    )
                 )
-            )
+    return violaciones
+
+
+def _articulo(unidad: str) -> str:
+    return unidad if unidad.startswith("el ") else f"la {unidad}"
+
+
+def _incremento_desnivel(plan: Plan, regla: RegistroRegla, maximo_semana: float, maximo_4_semanas: float) -> list[Violacion]:
+    """El desnivel objetivo de una semana de carga no sube más de
+    `maximo_semana` % respecto a la semana de carga anterior, ni más de
+    `maximo_4_semanas` % respecto a la de cuatro semanas antes (un bloque 3:1).
+    Como en el volumen, la descarga no cuenta como referencia."""
+    violaciones = []
+    cargas: list[Microciclo] = []
+    por_fecha: dict[date, Microciclo] = {}
+    for micro, meso in _microciclos(plan):
+        por_fecha[micro.fecha_inicio] = micro
+        if not micro.tipo_microciclo.es_carga or micro.objetivos.desnivel_positivo_m is None:
+            continue
+        actual = micro.objetivos.desnivel_positivo_m
+        anterior = cargas[-1] if cargas else None
+        cargas.append(micro)
+        if not _aplica_a_semana(regla, micro, meso):
+            continue
+        comprobaciones = []
+        if anterior is not None:
+            comprobaciones.append((anterior, maximo_semana, "la semana de carga del"))
+        hace_4 = por_fecha.get(micro.fecha_inicio - timedelta(weeks=4))
+        if hace_4 is not None and hace_4.tipo_microciclo.es_carga and hace_4.objetivos.desnivel_positivo_m is not None:
+            comprobaciones.append((hace_4, maximo_4_semanas, "cuatro semanas antes, el"))
+        for referencia, maximo, texto in comprobaciones:
+            cambio = variacion_pct(referencia.objetivos.desnivel_positivo_m, actual)
+            if cambio is not None and cambio > maximo:
+                violaciones.append(
+                    Violacion(
+                        regla_id=regla.id,
+                        fecha=micro.fecha_inicio,
+                        mensaje=(
+                            f"La semana del {micro.fecha_inicio} sube el desnivel un {cambio}% respecto a {texto} "
+                            f"{referencia.fecha_inicio}; el máximo es {maximo:g}%."
+                        ),
+                    )
+                )
     return violaciones
 
 
@@ -331,6 +381,9 @@ _EVALUADORES_REGLA: dict[frozenset[str], _EvaluadorRegla] = {
     ),
     frozenset({"larga_min_pct_semana", "larga_max_pct_semana"}): lambda plan, r: _proporcion_larga(
         plan, r, float(r.parametros["larga_min_pct_semana"])
+    ),
+    frozenset({"incremento_desnivel_max_pct", "incremento_desnivel_4_semanas_max_pct"}): lambda plan, r: _incremento_desnivel(
+        plan, r, float(r.parametros["incremento_desnivel_max_pct"]), float(r.parametros["incremento_desnivel_4_semanas_max_pct"])
     ),
     frozenset({"z2_max_pct_semanal"}): lambda plan, r: _zona_max_semanal(
         plan, r, ZonasFC.Z2, float(r.parametros["z2_max_pct_semanal"])

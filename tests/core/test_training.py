@@ -438,3 +438,23 @@ def test_una_sola_repeticion_no_son_intervalos():
     # calma, no como "1 × (25' + 0')".
     with pytest.raises(ValidationError):
         Intervalos(repeticiones=1, trabajo=timedelta(minutes=25))
+
+
+
+def test_sprints_en_cuesta_y_aceleraciones_son_rodajes_con_intervalos():
+    from datetime import date
+
+    from core.training import ClaseSesion, SesionPlanificada, TipoSesion
+
+    sprints = SesionPlanificada(
+        fecha=date(2026, 10, 20), clase_sesion=ClaseSesion.FONDO, tipo_sesion=TipoSesion.SPRINTS_CUESTA,
+        duracion_objetivo=timedelta(minutes=57, seconds=20), calentamiento=timedelta(minutes=20),
+        vuelta_calma=timedelta(minutes=20),
+        intervalos=Intervalos(repeticiones=8, trabajo=timedelta(seconds=10), recuperacion=timedelta(minutes=2)),
+    )
+    assert sprints.intervalos.repeticiones == 8
+    with pytest.raises(ValidationError, match="necesita su estructura"):
+        SesionPlanificada(
+            fecha=date(2026, 10, 20), clase_sesion=ClaseSesion.FONDO, tipo_sesion=TipoSesion.ACELERACIONES,
+            duracion_objetivo=timedelta(minutes=50),
+        )

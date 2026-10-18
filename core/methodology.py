@@ -188,7 +188,7 @@ class LimiteZona(BaseModel):
 
 
 class LimitesZona(BaseModel):
-    desde: LimiteZona
+    desde: Optional[LimiteZona] = None  # None: sin límite inferior (zona de recuperación)
     hasta: LimiteZona
 
 

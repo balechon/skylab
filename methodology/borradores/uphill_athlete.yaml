@@ -178,7 +178,7 @@ reglas:
     tipo_sesion: "Recuperación"
     descripcion: "Las sesiones de recuperación van por debajo de Z1 (por debajo del AeT − 20 % según la tabla de zonas), continuas de 20 a 60 min, en terreno menos empinado. Deben dejarte mejor de lo que empezaste (cap. 3, Recovery Zone; cap. 5, Recovery Workouts)."
     parametros:
-      zona_fc_maxima: "Z1"
+      zona_fc_maxima: "Rec"
 
   - id: "UA-INTENSIDAD-007"
     categoria: "Intensidad"
@@ -222,6 +222,7 @@ reglas:
   - id: "UA-INTENSIDAD-012"
     categoria: "Intensidad"
     objetivo_mesociclo: "Base aeróbica"
+    tipo_sesion: "Aceleraciones"
     descripcion: "Aceleraciones (pick-ups): una vez por semana dentro de un rodaje de Z1–Z2, a partir de unas semanas de base. De 6 a 8, de 8–15 s (el menú de sesiones da hasta 30 s), a ritmo rápido pero divertido, nunca a sprint, con 2 min suaves entre ellas (cap. 5, Pick-ups; cap. 9, Workout Categories)."
     parametros:
       sesiones_por_semana: 1
@@ -229,6 +230,7 @@ reglas:
 
   - id: "UA-INTENSIDAD-013"
     categoria: "Intensidad"
+    tipo_sesion: "Sprints en cuesta"
     descripcion: "Sprints en cuesta: una vez por semana en la base si tu fuerza general es suficiente. Cuesta de un 30 % aproximadamente; empezar con 6×10 s al máximo (90–95 % de la fuerza en las primeras sesiones), con recuperación completa de 2–3 min, y sumar como mucho 2 repeticiones por semana sin alargar más de 10 s cada una. Calentamiento largo obligatorio (cap. 5, Hill Sprints/Bounding; cap. 9, Anaerobic Capacity)."
     parametros:
       zona: "Z5"
@@ -369,6 +371,7 @@ zonas_fc:
   id: "UA-ZONAS-001"
   descripcion: "Cinco zonas ancladas en el umbral aeróbico (techo de Z2) y en el de lactato (techo de Z3): Z1 de AeT − 20 % a AeT − 10 %, Z2 de AeT − 10 % a AeT, Z3 de AeT a LT y Z4 de LT a la FC máxima. Por debajo de AeT − 20 %, recuperación (cap. 3, A Discussion of Intensity Zones; fig. 3.3)."
   zonas:
+    Rec: { hasta: { ancla: "AeT", pct: -20 } }
     Z1: { desde: { ancla: "AeT", pct: -20 }, hasta: { ancla: "AeT", pct: -10 } }
     Z2: { desde: { ancla: "AeT", pct: -10 }, hasta: { ancla: "AeT" } }
     Z3: { desde: { ancla: "AeT" }, hasta: { ancla: "LT" } }

@@ -35,6 +35,10 @@ class TipoSesion(str, Enum):
     FONDO = "Fondo"
     FUERZA = "Fuerza"
     RECUPERACION = "Recuperación"
+    # Rodajes suaves con esfuerzos muy cortos dentro (en `intervalos`): no son
+    # sesiones de intensidad aeróbica, sino trabajo de fuerza y economía.
+    SPRINTS_CUESTA = "Sprints en cuesta"  # p. ej. 6–8 × 10 s en cuesta, recuperación completa
+    ACELERACIONES = "Aceleraciones"       # p. ej. 6–8 × 15–30 s rápidos y sueltos (strides)
 
 
 class ClaseSesion(str, Enum):
@@ -46,7 +50,9 @@ class ClaseSesion(str, Enum):
 
 
 class ZonasFC(str, Enum):
-    """Zonas de frecuencia cardíaca"""
+    """Zonas de frecuencia cardíaca, de menor a mayor intensidad. Rec es la
+    zona de recuperación, por debajo de Z1."""
+    REC = "Rec"
     Z1 = "Z1"
     Z2 = "Z2"
     Z3 = "Z3"
@@ -56,7 +62,13 @@ class ZonasFC(str, Enum):
 
 # que tipo de sesiones esta permitido en cada clase de sesión
 TIPOS_PERMITIDOS: dict[ClaseSesion, set[TipoSesion]] = {
-    ClaseSesion.FONDO: {TipoSesion.BASE, TipoSesion.FONDO, TipoSesion.RECUPERACION},
+    ClaseSesion.FONDO: {
+        TipoSesion.BASE,
+        TipoSesion.FONDO,
+        TipoSesion.RECUPERACION,
+        TipoSesion.SPRINTS_CUESTA,
+        TipoSesion.ACELERACIONES,
+    },
     ClaseSesion.ESPECIFICO: {TipoSesion.SERIES, TipoSesion.TEMPO, TipoSesion.UMBRAL, TipoSesion.FUERZA},
     ClaseSesion.RECUPERACION: {TipoSesion.RECUPERACION},
     ClaseSesion.DESCANSO: set(),
@@ -95,6 +107,7 @@ def _validar_bloques_ordenados(bloques: list, nombre: str) -> None:
 # ---------- Sesiones ----------
 
 _TOLERANCIA_DURACION = timedelta(minutes=1)
+_CON_INTERVALOS = {TipoSesion.SERIES, TipoSesion.SPRINTS_CUESTA, TipoSesion.ACELERACIONES}
 
 
 class Intervalos(BaseModel):
@@ -193,8 +206,8 @@ class SesionPlanificada(BaseModel):
             valor = getattr(self, campo)
             if valor is not None and valor < timedelta(0):
                 raise ValueError(f"{campo} no puede ser negativo")
-        if self.tipo_sesion == TipoSesion.SERIES and self.intervalos is None:
-            raise ValueError("Una sesión de Series necesita su estructura en `intervalos`")
+        if self.tipo_sesion in _CON_INTERVALOS and self.intervalos is None:
+            raise ValueError(f"Una sesión de {self.tipo_sesion.value} necesita su estructura en `intervalos`")
 
         if self.duracion_objetivo is not None:
             estructura = self.duracion_estructura
@@ -396,14 +409,15 @@ class Carrera(BaseModel):
 
 
 class RangoFC(BaseModel):
-    """Rango de FC en pulsaciones por minuto."""
+    """Rango de FC en pulsaciones por minuto. Sin mínimo: "por debajo de"
+    (la zona de recuperación)."""
 
-    minimo: int = Field(ge=30, le=250)
+    minimo: Optional[int] = Field(default=None, ge=30, le=250)
     maximo: int = Field(ge=30, le=250)
 
     @model_validator(mode="after")
     def validar_orden(self) -> "RangoFC":
-        if self.minimo >= self.maximo:
+        if self.minimo is not None and self.minimo >= self.maximo:
             raise ValueError("El mínimo del rango de FC debe ser menor que el máximo")
         return self
 

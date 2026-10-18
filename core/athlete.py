@@ -165,8 +165,14 @@ def rangos_fc(definicion: Optional[DefinicionZonas], umbrales: Umbrales) -> dict
         return {}
     rangos = {}
     for zona, limites in definicion.zonas.items():
-        minimo, maximo = _pulsaciones(limites.desde, umbrales), _pulsaciones(limites.hasta, umbrales)
-        if minimo is not None and maximo is not None and minimo < maximo:
+        maximo = _pulsaciones(limites.hasta, umbrales)
+        if maximo is None:
+            continue
+        if limites.desde is None:
+            rangos[zona] = RangoFC(maximo=maximo)
+            continue
+        minimo = _pulsaciones(limites.desde, umbrales)
+        if minimo is not None and minimo < maximo:
             rangos[zona] = RangoFC(minimo=minimo, maximo=maximo)
     return rangos
 

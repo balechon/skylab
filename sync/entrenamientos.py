@@ -33,7 +33,13 @@ _ETIQUETA_TIPO = {
     TipoSesion.FONDO: "Fondo",
     TipoSesion.FUERZA: "Fuerza",
     TipoSesion.RECUPERACION: "Regenerativo",
+    TipoSesion.SPRINTS_CUESTA: "Hill sprints",
+    TipoSesion.ACELERACIONES: "Strides",
 }
+# Un esfuerzo de un minuto o menos no da tiempo a que la FC responda: esos
+# pasos van sin objetivo de FC (se hacen por sensación).
+_SIN_FC_HASTA_SEGUNDOS = 60
+_NUMERO_ZONA = {ZonasFC.REC: 1, ZonasFC.Z1: 1, ZonasFC.Z2: 2, ZonasFC.Z3: 3, ZonasFC.Z4: 4, ZonasFC.Z5: 5}
 
 _SIN_OBJETIVO = {"workoutTargetTypeId": 1, "workoutTargetTypeKey": "no.target"}
 _ZONA_FC = {"workoutTargetTypeId": 4, "workoutTargetTypeKey": "heart.rate.zone"}
@@ -58,8 +64,15 @@ def _paso(
         paso["endCondition"] = {"conditionTypeId": 3, "conditionTypeKey": "distance"}
         paso["endConditionValue"] = float(round(metros))
     rango = (rangos or {}).get(zona) if zona is not None else None
+    if segundos is not None and segundos <= _SIN_FC_HASTA_SEGUNDOS:
+        zona = None
     if zona is None:
         paso["targetType"] = _SIN_OBJETIVO
+    elif rango is not None and rango.minimo is None:
+        # "Por debajo de": Garmin necesita un rango cerrado; va sin objetivo y
+        # con el tope en la etiqueta del paso.
+        paso["targetType"] = _SIN_OBJETIVO
+        paso["description"] = f"{descripcion or ''} <{rango.maximo}".strip()
     elif rango is not None:
         # Pulsaciones propias del atleta: rango a medida, no la zona de Garmin.
         paso["targetType"] = _ZONA_FC
@@ -68,7 +81,7 @@ def _paso(
     else:
         # Zona con nombre: zoneNumber, nunca en targetValueOne (ver la doc de upload_workout).
         paso["targetType"] = _ZONA_FC
-        paso["zoneNumber"] = int(zona.value[1])
+        paso["zoneNumber"] = _NUMERO_ZONA[zona]
     return paso
 
 
@@ -93,7 +106,7 @@ def notas(sesion: SesionPlanificada, origen: str, rangos: Optional[dict[ZonasFC,
     datos = []
     rango = (rangos or {}).get(sesion.zona_fc_objetivo) if sesion.zona_fc_objetivo else None
     if rango is not None:
-        datos.append(f"FC {rango.minimo}-{rango.maximo}")
+        datos.append(f"FC <{rango.maximo}" if rango.minimo is None else f"FC {rango.minimo}-{rango.maximo}")
     if sesion.terreno is not None:
         datos.append(sesion.terreno.value)
     if sesion.desnivel_positivo_objetivo_m:

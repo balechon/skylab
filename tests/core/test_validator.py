@@ -456,3 +456,40 @@ def test_deficiencia_aerobica_es_el_test_del_10_por_ciento():
     assert deficiencia_aerobica(Umbrales(fc_aerobico=149, fc_lactato=170), 10) is True  # 14 %
     assert deficiencia_aerobica(Umbrales(fc_aerobico=160, fc_lactato=172), 10) is False  # 7,5 %
     assert deficiencia_aerobica(Umbrales(fc_aerobico=149), 10) is None
+
+
+
+# ---------- desnivel ----------
+
+def _micro_dmas(semana: int, desnivel: float, tipo=SEM_BASE, horas: float = 5) -> Microciclo:
+    micro = _micro(semana, tipo, horas=horas)
+    micro.objetivos.desnivel_positivo_m = desnivel
+    return micro
+
+
+REGLA_DESNIVEL = _regla("R-DMAS", {"incremento_desnivel_max_pct": 10, "incremento_desnivel_4_semanas_max_pct": 20})
+
+
+def test_el_desnivel_sube_como_mucho_un_10_por_ciento_por_semana():
+    plan = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro_dmas(0, 1000), _micro_dmas(1, 1100), _micro_dmas(2, 1250)]))
+    violaciones = validar_plan(plan, _perfil(reglas=[REGLA_DESNIVEL])).violaciones
+    assert len(violaciones) == 1 and "sube el desnivel un 13.6%" in violaciones[0].mensaje
+
+
+def test_el_desnivel_sube_como_mucho_un_20_por_ciento_en_cuatro_semanas():
+    # +7 % por semana durante tres semanas, descarga y vuelta: +22 % frente a
+    # la semana 0 cuatro semanas después.
+    semanas = [
+        _micro_dmas(0, 1000), _micro_dmas(1, 1070), _micro_dmas(2, 1140),
+        _micro_dmas(3, 600, tipo=DESCARGA, horas=2.5), _micro_dmas(4, 1220),
+    ]
+    violaciones = validar_plan(_plan((ObjetivoMesociclo.BASE_AEROBICA, semanas)), _perfil(reglas=[REGLA_DESNIVEL])).violaciones
+    assert [v.fecha for v in violaciones] == [LUNES + timedelta(weeks=4)]
+    assert "cuatro semanas antes" in violaciones[0].mensaje
+
+
+def test_la_descarga_tambien_baja_el_desnivel():
+    regla = _regla("R-DESCARGA", {"reduccion_descarga_min_pct": 40, "reduccion_descarga_max_pct": 60})
+    plan = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro_dmas(0, 1000), _micro_dmas(1, 900, tipo=DESCARGA, horas=2.5)]))
+    violaciones = validar_plan(plan, _perfil(reglas=[regla])).violaciones
+    assert len(violaciones) == 1 and "baja el desnivel un 10%" in violaciones[0].mensaje

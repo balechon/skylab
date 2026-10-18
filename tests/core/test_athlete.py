@@ -174,3 +174,12 @@ def test_con_todos_los_umbrales_salen_hasta_z4():
 
 def test_sin_definicion_de_zonas_no_hay_rangos():
     assert rangos_fc(None, Umbrales(fc_aerobico=149)) == {}
+
+
+
+def test_la_zona_de_recuperacion_no_tiene_minimo():
+    definicion = DefinicionZonas.model_validate(
+        {"id": "Z", "descripcion": ".", "zonas": {"Rec": {"hasta": {"ancla": "AeT", "pct": -20}}}}
+    )
+    rango = rangos_fc(definicion, Umbrales(fc_aerobico=149))[ZonasFC.REC]
+    assert (rango.minimo, rango.maximo) == (None, 119)

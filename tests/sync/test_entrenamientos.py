@@ -163,3 +163,23 @@ def test_sin_rango_para_la_zona_se_usa_la_zona_del_reloj():
     paso = entrenamiento["workoutSegments"][0]["workoutSteps"][0]
     assert paso["zoneNumber"] == 3 and "targetValueOne" not in paso
     assert "FC" not in entrenamiento["description"]
+
+
+
+def test_hill_sprints_sin_objetivo_de_fc_en_los_esfuerzos_cortos():
+    from core.training import RangoFC
+
+    rangos = {ZonasFC.REC: RangoFC(maximo=119), ZonasFC.Z1: RangoFC(minimo=119, maximo=134)}
+    sesion = SesionPlanificada(
+        fecha=date(2026, 10, 20), clase_sesion=ClaseSesion.FONDO, tipo_sesion=TipoSesion.SPRINTS_CUESTA,
+        zona_fc_objetivo=ZonasFC.Z1, duracion_objetivo=timedelta(minutes=57, seconds=20),
+        calentamiento=timedelta(minutes=20), vuelta_calma=timedelta(minutes=20),
+        intervalos=Intervalos(repeticiones=8, trabajo=timedelta(seconds=10), recuperacion=timedelta(minutes=2),
+                              zona_fc_recuperacion=ZonasFC.REC),
+    )
+    entrenamiento = sesion_a_entrenamiento(sesion, "PB_coach", rangos)
+    assert entrenamiento["workoutName"].endswith("Hill sprints")
+    grupo = entrenamiento["workoutSegments"][0]["workoutSteps"][1]
+    sprint, rec = grupo["workoutSteps"]
+    assert sprint["targetType"]["workoutTargetTypeKey"] == "no.target"  # 10 s: la FC no responde
+    assert rec["targetType"]["workoutTargetTypeKey"] == "no.target" and rec["description"] == "Rec <119"
