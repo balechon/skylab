@@ -61,11 +61,11 @@
       }
       #tools .label span { color: #7d8590; font-weight: 400; }
       .tool {
-        position: absolute; top: 700px; width: 257px; height: 325px; border-radius: 12px;
+        position: absolute; top: 700px; width: 217px; height: 325px; border-radius: 12px;
         background: #161b22; border: 2px solid var(--c); padding: 14px 16px;
       }
-      .tool .name { font-family: 'CodeMono', monospace; font-size: 17px; font-weight: 700; color: var(--c); }
-      .tool .what { font-size: 14.5px; color: #c9d1d9; margin-top: 8px; line-height: 1.35; height: 60px; }
+      .tool .name { font-family: 'CodeMono', monospace; font-size: 15.5px; font-weight: 700; color: var(--c); }
+      .tool .what { font-size: 14px; color: #c9d1d9; margin-top: 8px; line-height: 1.35; height: 76px; }
       .tool .io { margin-top: 10px; font-size: 13.5px; line-height: 1.45; }
       .tool .io .dim { display: block; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; }
       .tool .io .mono { font-size: 13.5px; color: #e6edf3; }
@@ -93,7 +93,7 @@
 
       <div id="header">
         <h1>SKYLAB <span>· el agente por dentro</span></h1>
-        <p>Implementado (publicar en el reloj, pendiente). Garmin entra y sale <b>solo por código determinista</b> (MCP); el LLM trabaja con datos ya validados y agregados.</p>
+        <p>Todo implementado. Garmin entra y sale <b>solo por código determinista</b> (MCP); el LLM trabaja con datos ya validados y agregados.</p>
       </div>
 
       <svg width="1920" height="1080" viewBox="0 0 1920 1080" style="position:absolute;inset:0">
@@ -129,47 +129,48 @@
 
       <!-- ===== entrada ===== -->
       <div class="box" style="--c:#f0883e; left:60px; top:160px; width:340px; height:300px">
-        <div class="tag">Entrada · desde n8n</div>
+        <div class="tag">Entrada · desde Notion (Evaluar)</div>
         <h2>Solicitud</h2>
         <div class="code">
           <div><span class="f">operacion</span>: <span class="s">"crear_ciclo"</span></div>
           <div>  | <span class="s">"ajuste_semanal"</span></div>
-          <div><span class="f">modo</span>: <span class="s">"construccion"</span></div>
-          <div>  | <span class="s">"competicion"</span></div>
           <div><span class="f">perfil</span>: <span class="s">"uphill_athlete"</span></div>
-          <div><span class="f">carrera</span>: <span class="t">Carrera</span> | <span class="t">None</span></div>
+          <div><span class="f">ficha</span>: <span class="t">FichaAtleta</span></div>
+          <div><span class="f">comentarios</span>: {<span class="f">general</span>,</div>
+          <div>  <span class="f">por_sesion</span>} | <span class="t">None</span></div>
         </div>
+        <div class="sub">Recalcular: máx. 2 por semana.</div>
       </div>
 
       <!-- ===== garmin: sync / mcp / publicar ===== -->
       <div class="box" style="--c:#56d4dd; left:60px; top:490px; width:340px; height:130px">
         <div class="tag">Paso 0 · antes del agente · sin LLM</div>
         <h2>sync</h2>
-        <div class="sub">Actividades nuevas → <span class="mono">SesionRealizada</span> (Pydantic) → Postgres.</div>
+        <div class="sub">Garmin crudo → <span class="mono">bronze</span> · <span class="mono">SesionRealizada</span> → Postgres.</div>
       </div>
       <div class="box" style="--c:#f472b6; left:60px; top:654px; width:340px; height:126px; border-style:dashed">
         <div class="tag">Contenedor · red interna</div>
         <h2>garmin-mcp</h2>
-        <div class="sub">Lista blanca de ~5 tools. Habla con Garmin Connect.</div>
+        <div class="sub">Lista blanca de tools. Habla con Garmin Connect.</div>
       </div>
       <div class="box" style="--c:#56d4dd; left:60px; top:844px; width:340px; height:150px">
         <div class="tag">Paso 5 · tras la guardia · sin LLM</div>
         <h2>publicar</h2>
-        <div class="sub">Sesiones de la próxima semana → JSON de entrenamiento (desde código) → tu reloj.</div>
+        <div class="sub">Semana nueva → entrenamientos con FC en ppm (desde código) → tu reloj. Y a Notion.</div>
       </div>
       <div class="lbl" style="left:244px; top:627px; width:60px; font-size:12px; color:#f472b6">lee</div>
       <div class="lbl" style="left:244px; top:802px; width:70px; font-size:12px; color:#f472b6">escribe</div>
 
       <!-- ===== agente ===== -->
       <div class="box" style="--c:#a78bfa; left:470px; top:160px; width:560px; height:410px">
-        <div class="tag">agent/ · bucle de tool use</div>
+        <div class="tag">agent/grafo.py · grafo LangGraph</div>
         <h2>Claude Opus 5.5<span class="mono">claude-opus-5-5</span></h2>
         <div class="kv">
-          <div><span class="k">SDK</span><span class="v"><span class="mono">anthropic</span> · bucle manual, máx. 20 iteraciones</span></div>
+          <div><span class="k">orquestación</span><span class="v">LangGraph · máx. 20 iteraciones · caché</span></div>
           <div><span class="k">thinking · effort</span><span class="v mono">adaptive · high</span></div>
           <div><span class="k">tools</span><span class="v"><span class="mono">tool_choice: auto</span> · <span class="mono">strict: true</span></span></div>
           <div><span class="k">entrega</span><span class="v">tool <span class="mono">entregar_resultado</span> → ResultadoAgente</span></div>
-          <div><span class="k">si el modelo rechaza</span><span class="v"><span class="mono">fallbacks: "default"</span></span></div>
+          <div><span class="k">registro</span><span class="v">tokens, caché, duración → Monitor</span></div>
         </div>
         <div class="rules">
           <h4>System prompt · reglas duras</h4>
@@ -191,6 +192,7 @@
           <div><span class="f">estado</span>: <span class="s">"plan_valido"</span> | <span class="s">"sin_solucion"</span></div>
           <div><span class="f">plan</span>: <span class="t">Plan</span>  <span class="c"># versión n+1, en sus 3 niveles</span></div>
           <div><span class="f">justificaciones</span>: [ {<span class="f">decision</span>, <span class="f">regla_ids</span>} ]  <span class="c"># incluye la regla de ajuste</span></div>
+          <div><span class="f">feedback</span>: {<span class="f">lo_que_paso</span>, <span class="f">por_que_cambia</span>, <span class="f">consejos</span>}  <span class="c"># a Notion</span></div>
           <div><span class="f">violaciones</span>: [...]  ·  <span class="f">resumen</span>: <span class="t">str</span></div>
         </div>
       </div>
@@ -198,13 +200,13 @@
       <div class="box" style="--c:#2dd4bf; left:1110px; top:450px; width:750px; height:130px">
         <div class="tag">Guardia final · en entregar_resultado · código, no LLM</div>
         <div class="sub" style="color:#c9d1d9; margin-top:8px">Re-valida el plan, exige que cada <span class="mono">regla_id</span> exista, que se aplique la acción del motor y que las semanas pasadas no cambien.</div>
-        <div class="sub"><span style="color:#3fb950; font-weight:600">✓ pasa</span> → guarda la versión en Postgres y publica (paso 5) · <span style="color:#f85149; font-weight:600">✗ falla</span> → se reintenta</div>
+        <div class="sub"><span style="color:#3fb950; font-weight:600">✓ pasa</span> → guarda la versión y publica (paso 5) · <span style="color:#f85149; font-weight:600">✗ falla</span> → se reintenta</div>
       </div>
 
       <!-- ===== tools ===== -->
       <div id="tools"><div class="label">Tools propias <span>· funciones Python que el LLM puede pedir; nosotros las ejecutamos</span></div></div>
 
-      <div class="tool" style="--c:#60a5fa; left:490px">
+      <div class="tool" style="--c:#60a5fa; left:486px">
         <div class="name">resumen_historial</div>
         <div class="what">Semanas cerradas, ya agregadas. Nunca sesiones crudas.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">n_semanas</span></div>
@@ -213,7 +215,7 @@
         <div class="impl">implementa <span class="mono">calculator.py</span> + Postgres</div>
       </div>
 
-      <div class="tool" style="--c:#fbbf24; left:763px">
+      <div class="tool" style="--c:#fbbf24; left:713px">
         <div class="name">obtener_perfil</div>
         <div class="what">Reglas del perfil activo, incluidas las de ajuste.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">—</span></div>
@@ -222,7 +224,7 @@
         <div class="impl">implementa <span class="mono">core/loader.py</span></div>
       </div>
 
-      <div class="tool" style="--c:#56d4dd; left:1036px">
+      <div class="tool" style="--c:#56d4dd; left:940px">
         <div class="name">obtener_plan</div>
         <div class="what">Plan vigente: semana detallada, objetivos y esqueleto.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">—</span></div>
@@ -231,7 +233,16 @@
         <div class="impl">implementa Postgres (JSONB)</div>
       </div>
 
-      <div class="tool" style="--c:#f472b6; left:1309px">
+      <div class="tool" style="--c:#60a5fa; left:1167px">
+        <div class="name">obtener_atleta</div>
+        <div class="what">Tu ficha: umbrales, zonas en ppm y días disponibles.</div>
+        <div class="io"><span class="dim">entra</span><span class="mono">—</span></div>
+        <div class="io"><span class="dim">devuelve</span><span class="mono">FichaAtleta + rangos FC</span></div>
+        <div class="chip">desde Notion</div>
+        <div class="impl">implementa <span class="mono">core/athlete.py</span></div>
+      </div>
+
+      <div class="tool" style="--c:#f472b6; left:1394px">
         <div class="name">evaluar_semana</div>
         <div class="what">Adherencia + progreso, y qué acción toca según las reglas de ajuste.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">semana cerrada</span></div>
@@ -240,7 +251,7 @@
         <div class="impl">implementa <span class="mono">core/deviation.py</span></div>
       </div>
 
-      <div class="tool" style="--c:#2dd4bf; left:1582px">
+      <div class="tool" style="--c:#2dd4bf; left:1621px">
         <div class="name">validar_plan</div>
         <div class="what">El árbitro: comprueba el plan propuesto contra el perfil.</div>
         <div class="io"><span class="dim">entra</span><span class="mono">Plan propuesto</span></div>

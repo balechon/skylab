@@ -62,7 +62,7 @@
 
       /* ---------- docker container ---------- */
       #docker {
-        position: absolute; left: 450px; top: 170px; width: 1010px; height: 850px;
+        position: absolute; left: 450px; top: 166px; width: 1010px; height: 874px;
         border: 2px dashed #2496ed; border-radius: 20px;
         background: rgba(36, 150, 237, 0.045);
       }
@@ -97,7 +97,7 @@
          data-width="1920" data-height="1080">
 
       <div id="header">
-        <h1>SKYLAB <span>· arquitectura</span></h1>
+        <h1>SKYLAB <span>· Trail Running Coaching · arquitectura</span></h1>
         <p>Motor híbrido: el <i>agente LLM propone</i>, el <b>motor determinista decide</b> — y cada decisión cita un ID de regla.</p>
       </div>
 
@@ -114,152 +114,189 @@
           <marker id="ah-violet" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#a78bfa" />
           </marker>
+          <marker id="ah-orange" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="#f0883e" />
+          </marker>
         </defs>
         <g fill="none" stroke="#8b949e" stroke-width="2.5">
-          <!-- n8n -> API (request) and API -> n8n (response) -->
-          <path d="M380 262 H496" marker-end="url(#ah)" />
-          <path d="M498 312 H384" marker-end="url(#ah)" />
-          <!-- n8n -> notifications -->
-          <path d="M220 400 V556" marker-end="url(#ah)" />
-          <!-- API -> agent -->
-          <path d="M1045 340 V396" marker-end="url(#ah)" />
-          <path d="M1290 340 V396" marker-end="url(#ah)" />
-          <!-- agent -> Claude API -->
-          <path d="M1410 475 H1526" marker-end="url(#ah)" />
-          <!-- agent -> mcp_client -->
-          <path d="M1270 730 V786" marker-end="url(#ah)" />
-          <!-- mcp_client <-> garmin-mcp (lee / escribe) -->
-          <path d="M1410 865 H1526" marker-end="url(#ah)" />
-          <path d="M1528 915 H1414" marker-end="url(#ah)" />
-          <!-- garmin-mcp <-> Garmin Connect -->
-          <path d="M1700 970 V996" marker-end="url(#ah)" />
-          <!-- engine -> domain, engine -> YAML -->
-          <path d="M640 730 V786" marker-end="url(#ah)" />
-          <path d="M850 730 V786" marker-end="url(#ah)" />
+          <!-- skylab-notion -> skylab-api -->
+          <path d="M760 275 H786" marker-end="url(#ah)" />
+          <!-- skylab-notion -> skylab-sync (sync · publicar), por encima de la fila -->
+          <path d="M620 210 V192 H1285 V206" marker-end="url(#ah)" />
+          <!-- skylab-api -> agente -->
+          <path d="M1060 340 V376" marker-end="url(#ah)" />
+          <!-- skylab-sync <-> garmin-mcp -->
+          <path d="M1430 255 H1516" marker-end="url(#ah)" />
+          <path d="M1518 305 H1434" marker-end="url(#ah)" />
+          <!-- garmin-mcp -> Garmin Connect -->
+          <path d="M1695 380 V404" marker-end="url(#ah)" />
+          <!-- skylab-sync -> postgres (pasillo a la derecha del agente) -->
+          <path d="M1400 340 V736" marker-end="url(#ah)" />
+          <!-- agente -> Claude API -->
+          <path d="M1360 560 H1516" marker-end="url(#ah)" />
+          <!-- agente -> postgres -->
+          <path d="M1185 700 V736" marker-end="url(#ah)" />
+          <!-- motor -> perfiles, motor -> ficha -->
+          <path d="M620 700 V736" marker-end="url(#ah)" />
+          <path d="M850 700 V736" marker-end="url(#ah)" />
         </g>
+        <!-- Notion <-> skylab-notion (HTTPS saliente) -->
+        <path d="M478 255 H404" fill="none" stroke="#f0883e" stroke-width="3" marker-end="url(#ah-orange)" />
+        <path d="M402 305 H476" fill="none" stroke="#f0883e" stroke-width="3" marker-end="url(#ah-orange)" />
         <!-- propose / validate loop -->
-        <path d="M1030 520 H884" fill="none" stroke="#a78bfa" stroke-width="3" marker-end="url(#ah-violet)" />
-        <path d="M880 620 H1026" fill="none" stroke="#2dd4bf" stroke-width="3" marker-end="url(#ah-teal)" />
+        <path d="M1008 500 H904" fill="none" stroke="#a78bfa" stroke-width="3" marker-end="url(#ah-violet)" />
+        <path d="M902 610 H1006" fill="none" stroke="#2dd4bf" stroke-width="3" marker-end="url(#ah-teal)" />
       </svg>
 
-      <!-- ===== column 1: orchestration ===== -->
-      <div class="box" style="--c:#f0883e; left:60px; top:220px; width:320px; height:180px">
-        <div class="tag">Orquestador · mismo VPS</div>
-        <h2>n8n</h2>
-        <div class="sub">Dispara el proceso (cron semanal / webhook). Sin lógica de dominio.</div>
-        <div class="items"><div class="item"><span class="dot todo"></span>workflows pendientes</div></div>
+      <!-- ===== column 1: the athlete's side ===== -->
+      <div class="box" style="--c:#f0883e; left:60px; top:210px; width:340px; height:350px">
+        <div class="tag">Interfaz del atleta · Notion</div>
+        <h2>Notion</h2>
+        <div class="sub">Conexión interna con acceso solo a la página SKYLAB.</div>
+        <div class="items">
+          <div class="item"><span class="dot done"></span>Atleta<span class="note">ficha, umbrales, días</span></div>
+          <div class="item"><span class="dot done"></span>Semanas<span class="note">Evaluar · feedback</span></div>
+          <div class="item"><span class="dot done"></span>Entrenamientos<span class="note">plan, hecho, comentario</span></div>
+          <div class="item"><span class="dot done"></span>Monitor<span class="note">coste, carga</span></div>
+          <div class="item"><span class="dot todo"></span>Carreras · Tests<span class="note">sin sincronizar</span></div>
+        </div>
       </div>
 
-      <div class="box" style="--c:#f0883e; left:60px; top:560px; width:320px; height:140px">
-        <div class="tag">Salida</div>
-        <h2>Notificaciones</h2>
-        <div class="sub">Telegram / email con el plan y su justificación.</div>
+      <div class="box" style="--c:#f0883e; left:60px; top:590px; width:340px; height:180px">
+        <div class="tag">Ciclo semanal</div>
+        <div class="items" style="margin-top:8px">
+          <div class="item">1 · Entrenas con el reloj</div>
+          <div class="item">2 · Comentas cada sesión en Notion</div>
+          <div class="item">3 · Lunes: marcas Evaluar → ajuste y feedback</div>
+          <div class="item">4 · La semana nueva llega al reloj</div>
+        </div>
       </div>
 
-      <div id="legend">
+      <div id="legend" style="top:800px">
         <h3>Estado</h3>
         <div class="items">
           <div class="item"><span class="dot done"></span>implementado + tests</div>
           <div class="item"><span class="dot part"></span>en progreso</div>
           <div class="item"><span class="dot todo"></span>pendiente</div>
-          <div class="item"><span class="dot decide"></span>en decisión</div>
         </div>
         <div class="rule">Regla de oro: si el motor no puede cumplir las restricciones del perfil, el sistema <b style="color:#e6edf3">lo dice</b> en vez de inventar un plan.</div>
       </div>
 
-      <!-- ===== docker service ===== -->
+      <!-- ===== docker stack ===== -->
       <div id="docker">
-        <div class="label"><span class="dot todo" style="border-color:#2496ed"></span>Docker · red interna (skylab-api, skylab-sync, postgres)</div>
+        <div class="label"><span class="dot done" style="background:#2496ed"></span>Docker Compose · proyecto skylab · solo 127.0.0.1 (VPS pendiente)</div>
       </div>
 
-      <div class="box" style="--c:#f0883e; left:500px; top:230px; width:570px; height:110px">
-        <div class="tag">api/ · interfaz de entrada</div>
-        <h2>API HTTP mínima</h2>
-        <div class="sub"><span class="mono" style="color:#e6edf3">POST /plan</span> · <span class="mono" style="color:#e6edf3">POST /semana/ajustar</span> · solo accesible por n8n</div>
+      <div class="box" style="--c:#f0883e; left:480px; top:210px; width:280px; height:130px">
+        <div class="tag">notion/ · skylab-notion</div>
+        <h2>Servicio Notion</h2>
+        <div class="sub">Consulta Notion cada 3 min. Solo habla con APIs, no con la base.</div>
       </div>
 
-      <div class="box" style="--c:#56d4dd; left:1110px; top:230px; width:300px; height:110px">
-        <div class="tag">servicio postgres · JSONB</div>
-        <h2>PostgreSQL</h2>
-        <div class="sub">Planes versionados, sesiones</div>
+      <div class="box" style="--c:#f0883e; left:790px; top:210px; width:320px; height:130px">
+        <div class="tag">agent/api.py · skylab-api</div>
+        <h2>API HTTP</h2>
+        <div class="sub"><span class="mono" style="color:#e6edf3">/plan</span> · <span class="mono" style="color:#e6edf3">/semana/ajustar</span> · <span class="mono" style="color:#e6edf3">/atleta</span> · <span class="mono" style="color:#e6edf3">/monitor</span></div>
+      </div>
+
+      <div class="box" style="--c:#f472b6; left:1140px; top:210px; width:290px; height:130px">
+        <div class="tag">sync/ · skylab-sync</div>
+        <h2>Sync Garmin</h2>
+        <div class="sub"><span class="mono" style="color:#e6edf3">/sync</span> actividades · <span class="mono" style="color:#e6edf3">/publicar</span> semana al reloj</div>
       </div>
 
       <!-- engine -->
-      <div class="box" style="--c:#2dd4bf; left:500px; top:400px; width:380px; height:330px">
+      <div class="box" style="--c:#2dd4bf; left:480px; top:380px; width:420px; height:320px">
         <div class="tag">core/ · árbitro</div>
         <h2>Motor determinista</h2>
         <div class="sub">Funciones puras, sin IO ni LLM. Única autoridad sobre «¿cumple la metodología?».</div>
         <div class="items">
-          <div class="item"><span class="dot done"></span><span class="mono">loader.py</span><span class="note">YAML → modelo</span></div>
-          <div class="item"><span class="dot done"></span><span class="mono">calculator.py</span><span class="note">carga / volumen</span></div>
-          <div class="item"><span class="dot done"></span><span class="mono">validator.py</span><span class="note">violaciones + ID</span></div>
-          <div class="item"><span class="dot done"></span><span class="mono">deviation.py</span><span class="note">plan vs. real</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">validator.py</span><span class="note">reglas + tipos de semana</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">deviation.py</span><span class="note">evaluación semanal</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">athlete.py</span><span class="note">disponibilidad · zonas</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">calculator.py</span><span class="note">carga · zonas comparables</span></div>
         </div>
       </div>
 
       <!-- loop labels -->
-      <div class="lbl" style="left:884px; top:462px; width:142px"><b>propuesta</b> de plan</div>
-      <div class="lbl" style="left:884px; top:630px; width:142px"><b>veredicto</b> + IDs de regla</div>
-      <div class="lbl" style="left:884px; top:548px; width:142px; color:#7d8590; font-size:13px">propone → valida → reintenta</div>
+      <div class="lbl" style="left:904px; top:440px; width:104px"><b>propuesta</b> de plan</div>
+      <div class="lbl" style="left:904px; top:622px; width:104px"><b>veredicto</b> + IDs</div>
+      <div class="lbl" style="left:904px; top:540px; width:104px; color:#7d8590; font-size:12px">propone → valida → corrige</div>
 
       <!-- agent -->
-      <div class="box" style="--c:#a78bfa; left:1030px; top:400px; width:380px; height:330px">
+      <div class="box" style="--c:#a78bfa; left:1010px; top:380px; width:350px; height:320px">
         <div class="tag">agent/ · proponente</div>
-        <h2>Agente LLM</h2>
-        <div class="sub">Interpreta el objetivo, compone el plan y redacta la justificación. Nunca valida por sí solo.</div>
+        <h2>Agente (LangGraph)</h2>
+        <div class="sub">Compone el plan, explica la semana y lee tus comentarios. Nunca valida por sí solo.</div>
         <div class="items">
-          <div class="item"><span class="dot done"></span><span class="mono">agente.py</span><span class="note">bucle tool use</span></div>
-          <div class="item"><span class="dot done"></span><span class="mono">herramientas.py</span><span class="note">tools</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">grafo.py</span><span class="note">bucle de tools</span></div>
           <div class="item"><span class="dot done"></span><span class="mono">guardia.py</span><span class="note">revisión final</span></div>
           <div class="item"><span class="dot done"></span><span class="mono">servicio.py</span><span class="note">carga y guarda</span></div>
         </div>
       </div>
 
       <!-- bottom row -->
-      <div class="box" style="--c:#60a5fa; left:500px; top:790px; width:280px; height:200px">
-        <div class="tag">core/ · modelos</div>
-        <h2>Modelos Pydantic</h2>
-        <div class="items">
-          <div class="item"><span class="dot done"></span><span class="mono">training.py</span></div>
-          <div class="item"><span class="dot done"></span><span class="mono">methodology.py</span></div>
-        </div>
-        <div class="pill">usado por todas las capas</div>
-      </div>
-
-      <div class="box" style="--c:#fbbf24; left:815px; top:790px; width:280px; height:200px">
-        <div class="tag">methodology/ · volumen</div>
+      <div class="box" style="--c:#fbbf24; left:480px; top:740px; width:280px; height:270px">
+        <div class="tag">methodology/ · metodología</div>
         <h2>Perfiles YAML</h2>
         <div class="items">
-          <div class="item"><span class="dot done"></span><span class="mono">_template.yaml</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">uphill_athlete</span><span class="note">activo</span></div>
           <div class="item"><span class="dot done"></span><span class="mono">ejemplo_didactico</span></div>
         </div>
+        <div class="sub" style="margin-top:10px">Reglas, zonas por umbral, tipos de semana y la guía del autor.</div>
         <div class="pill">1 perfil activo por plan</div>
       </div>
 
-      <div class="box" style="--c:#f472b6; left:1130px; top:790px; width:280px; height:200px; border-style:dashed">
-        <div class="tag">imagen aparte · skylab-sync</div>
-        <h2>Sync (MCP)</h2>
+      <div class="box" style="--c:#60a5fa; left:790px; top:740px; width:320px; height:270px">
+        <div class="tag">core/ · modelos</div>
+        <h2>Ficha y modelos</h2>
         <div class="items">
-          <div class="item"><span class="dot part"></span><span class="mono">garmin.py</span><span class="note">sync ✓ · publicar</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">training.py</span><span class="note">plan, sesiones</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">methodology.py</span><span class="note">perfil</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">athlete.py</span><span class="note">ficha</span></div>
         </div>
-        <div class="sub" style="margin-top:10px">Única imagen con MCP. Si cae, la API sigue con lo guardado.</div>
+        <div class="pill">usados por todas las capas</div>
       </div>
+
+      <div class="box" style="--c:#56d4dd; left:1140px; top:740px; width:290px; height:270px">
+        <div class="tag">persistence/ · postgres</div>
+        <h2>PostgreSQL</h2>
+        <div class="sub">Planes versionados, ficha, ejecuciones.</div>
+        <div class="items">
+          <div class="item"><span class="dot done"></span><span class="mono">bronze_*</span><span class="note">Garmin crudo</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">silver_*</span><span class="note">vistas limpias</span></div>
+          <div class="item"><span class="dot done"></span><span class="mono">gold_*</span><span class="note">monitor</span></div>
+        </div>
+      </div>
+
+      <div class="lbl" style="left:404px; top:233px; width:44px; font-size:12px; color:#f0883e">escribe</div>
+      <div class="lbl" style="left:404px; top:311px; width:44px; font-size:12px; color:#f0883e">lee</div>
 
       <!-- ===== column 3: external services ===== -->
-      <div class="box" style="--c:#8b949e; left:1530px; top:400px; width:340px; height:150px">
-        <div class="tag">Externo</div>
-        <h2>Claude API</h2>
-        <div class="sub">Tool use · recibe el perfil, el historial y las violaciones del motor.</div>
-      </div>
-
-      <div class="box" style="--c:#f472b6; left:1530px; top:790px; width:340px; height:180px; border-style:dashed">
+      <div class="box" style="--c:#f472b6; left:1520px; top:210px; width:350px; height:170px; border-style:dashed">
         <div class="tag">Contenedor propio · red interna</div>
         <h2>garmin-mcp</h2>
-        <div class="sub"><span class="mono">Taxuspt/garmin_mcp</span> por HTTP. Lee actividades y programa entrenamientos. Sin puerto público.</div>
+        <div class="sub"><span class="mono">Taxuspt/garmin_mcp</span> por MCP/HTTP. Lee actividades y programa entrenamientos. Sin puerto público.</div>
       </div>
-      <div class="lbl" style="left:1420px; top:838px; width:100px; font-size:12px; color:#f472b6; text-align:center">escribe</div>
-      <div class="lbl" style="left:1420px; top:922px; width:100px; font-size:12px; color:#f472b6; text-align:center">lee</div>
-      <div class="lbl" style="left:1530px; top:1000px; width:340px; text-align:center; font-size:16px; color:#9da7b3">Garmin Connect · reloj</div>
+      <div class="lbl" style="left:1462px; top:233px; width:54px; font-size:12px; color:#f472b6">escribe</div>
+      <div class="lbl" style="left:1462px; top:311px; width:54px; font-size:12px; color:#f472b6">lee</div>
+      <div class="lbl" style="left:1520px; top:410px; width:350px; text-align:center; font-size:16px; color:#9da7b3">Garmin Connect · reloj</div>
+
+      <div class="box" style="--c:#8b949e; left:1520px; top:480px; width:350px; height:170px">
+        <div class="tag">Externo</div>
+        <h2>Claude API</h2>
+        <div class="sub">Opus 5.5 · tool use con caché. Recibe perfil, ficha, historial y la evaluación del motor.</div>
+      </div>
+
+      <div class="box" style="--c:#8b949e; left:1520px; top:740px; width:350px; height:270px">
+        <div class="tag">Seguridad</div>
+        <h2>Secretos</h2>
+        <div class="items">
+          <div class="item"><span class="mono">secrets/</span><span class="note">Garmin, token Notion</span></div>
+          <div class="item"><span class="mono">.env</span><span class="note">claves, solo las suyas por servicio</span></div>
+        </div>
+        <div class="sub" style="margin-top:10px">Nada expuesto a internet: Notion y Claude son llamadas salientes.</div>
+      </div>
 
     </div>
     <script>

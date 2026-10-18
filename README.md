@@ -32,20 +32,31 @@ El sistema es un motor híbrido:
 
 ## Flujo
 
+Uso el sistema desde **Notion**; el servicio `skylab-notion` lo consulta
+cada 3 minutos y habla con el resto solo por sus APIs:
+
 ```
-POST skylab-sync /sync ─────────▶ garmin-mcp ◀── Garmin Connect  (actividades → Postgres)
-POST skylab-api  /semana/ajustar ─┐
-POST skylab-api  /plan ───────────┤
-                                    ▼
-                    skylab-api: agente LLM (propone) + motor determinista (decide)
-                                  + perfiles YAML + PostgreSQL (planes versionados)
-POST skylab-sync /publicar ─────▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
+Notion ◀──▶ skylab-notion ──▶ skylab-api  /plan · /semana/ajustar · /atleta · /monitor
+                     │                  agente LLM (propone) + motor determinista (decide)
+                     │                  + perfiles YAML + PostgreSQL (bronze · silver · gold)
+                     └──────▶ skylab-sync /sync ◀── garmin-mcp ◀── Garmin Connect
+                                          /publicar ──▶ garmin-mcp ──▶ calendario ──▶ reloj
 ```
 
-Por ahora el ciclo se lanza a mano (ver `docs/api.md`); la programación
-automática está pendiente de decidir.
+La semana tipo:
+1. Entreno con el reloj.
+2. Comento cada sesión en Notion.
+3. El lunes marco **Evaluar** en la semana cerrada.
+4. El agente ajusta la siguiente semana y escribe el feedback.
+5. La semana nueva llega al reloj y a Notion.
+
+La página **Monitor** muestra el coste del agente, los tokens y la carga semanal (plan frente a hecho).
+
+Contrato de la API: [`docs/api.md`](docs/api.md).
 
 ![Arquitectura](docs/arquitectura.png)
+
+![El agente por dentro](docs/agente.png)
 
 ## Estructura del proyecto
 
@@ -53,13 +64,13 @@ Workspace de uv: cada carpeta es un paquete con su `pyproject.toml` y sus
 scripts directamente dentro (`from core.training import Plan`).
 
 ```
-core/           skylab-core         modelos (training, methodology) y motor determinista
+core/           skylab-core         modelos (training, methodology, athlete) y motor determinista
                                       (loader, calculator, validator, deviation). Sin IO.
-persistence/    skylab-persistence  Postgres: modelos, repositorio y migraciones Alembic
+persistence/    skylab-persistence  Postgres: modelos, repositorio, migraciones Alembic y vistas silver/gold
 sync/           skylab-sync         sync Garmin → Postgres vía MCP (garmin.py, app.py)
 notion/         skylab-notion       interfaz del atleta en Notion (consulta Notion cada 3 min; solo APIs)
-agent/          skylab-agent        agente LLM (bucle, tools, guardia, servicio) + api.py
-methodology/    Perfiles de metodología (YAML)
+agent/          skylab-agent        agente LLM (grafo LangGraph, tools, guardia, servicio) + api.py
+methodology/    Perfiles de metodología (YAML): uphill_athlete (activo) y ejemplo_didactico
 tests/          Tests de todo el workspace
 docs/           Visión, decisiones, contrato de la API y diagramas
 docker/         Inicialización de Postgres
@@ -67,21 +78,24 @@ docker/         Inicialización de Postgres
 
 ## Estado actual
 
-- Hecho: modelos de dominio alineados con la visión (modos construcción /
-  competición, tres niveles de detalle, sesión planificada vs. realizada,
-  reglas de ajuste), loader de perfiles, perfil didáctico, API con `/health`
-  y stack Docker (postgres + skylab + garmin-mcp), todo con tests.
-- Hecho también: motor determinista completo (`core/calculator.py`,
-  `validator.py`, `deviation.py`) y Postgres en el stack.
-- Hecho también: persistencia en Postgres (`persistence/`, SQLAlchemy +
-  migraciones Alembic en `persistence/migrations/`).
-- Hecho también: sync de Garmin (`sync/`) y agente LLM (`agent/`:
-  bucle de tool use con Claude, guardia final y servicio que persiste),
-  expuesto en la API (`POST /plan`, `POST /semana/ajustar`); el sync es un
-  servicio aparte (`skylab-sync`, `POST /sync`).
-- Hecho también: publicar la semana en el reloj (`POST /publicar`).
-- Siguiente: migrar el agente a LangGraph, pipeline de observabilidad,
-  programación automática del ciclo semanal y el primer perfil real.
+En uso real desde la semana del 19/10/2026: primer ciclo de base con el
+perfil Uphill Athlete y los umbrales del test del 18/10 (AeT 164, LT 179).
+
+Hecho, con tests:
+- **Motor determinista:** reglas, tipos de semana, disponibilidad del atleta y zonas por umbral.
+- **Agente:** LangGraph con guardia final y feedback semanal.
+- **Persistencia:** Postgres con planes versionados y ficha del atleta.
+- **Garmin:** sync de actividades y publicación de la semana en el reloj (FC en ppm).
+- **Notion:** ficha, semanas, entrenamientos, Evaluar/Recalcular y monitor.
+- **Pipeline medallón:** `bronze_garmin_actividad`, más vistas `silver_*` y `gold_*`.
+
+Pendiente:
+- Copias de seguridad de Postgres.
+- Despliegue en un VPS.
+- Evaluar automático los lunes.
+- Sincronizar las tablas Carreras y Tests.
+- Sesiones de fuerza.
+- Crear un ciclo desde Notion.
 
 ## Setup
 
@@ -89,7 +103,7 @@ Entorno y dependencias con [uv](https://docs.astral.sh/uv/) (Python 3.12,
 fijado en `.python-version`; versiones exactas en `uv.lock`):
 
 ```bash
-uv sync --all-packages   # .venv con los cuatro paquetes + grupo dev
+uv sync --all-packages   # .venv con los cinco paquetes + grupo dev
 uv run pytest            # tests (los de Postgres se saltan sin TEST_DATABASE_URL)
 uv add --package skylab-agent <paquete>   # dependencia para un paquete concreto
 ```
@@ -102,6 +116,7 @@ Una imagen por servicio, cada una con solo su paquete:
 docker compose up -d --build                    # postgres + skylab-api (127.0.0.1:8000)
 docker compose --profile garmin up -d --build   # + skylab-sync + garmin-mcp
 docker compose run --rm --build test            # todos los tests, incluidos los de Postgres
+docker compose --profile garmin --profile notion up -d --build   # + skylab-notion
 docker compose exec skylab-sync python -m sync   # sync manual
 ```
 
@@ -114,3 +129,7 @@ printf '%s' 'tu_email' > secrets/garmin_email.txt
 printf '%s' 'tu_password' > secrets/garmin_password.txt
 docker compose --profile garmin run --rm garmin-mcp
 ```
+
+`skylab-notion` necesita el token de una conexión interna de Notion en
+`secrets/notion_token.txt` y los ids de las bases en `.env` (`NOTION_DS_*`,
+ver `.env.example`). Con `NOTION_SIMULACION=1` lee pero no escribe.
