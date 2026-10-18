@@ -1,4 +1,4 @@
-# API HTTP mínima de PB_coach. Publicada solo en 127.0.0.1 del host (en el
+# API HTTP mínima de SKYLAB. Publicada solo en 127.0.0.1 del host (en el
 # VPS, por túnel SSH); contrato en docs/api.md.
 #
 #   GET  /health            sin autenticación (healthcheck)
@@ -9,11 +9,11 @@
 #                           los comentarios del atleta; ?forzar=true para
 #                           rehacer una semana ya ajustada
 #
-# Garmin es otro servicio (pb-coach-sync): el sync se llama antes y la
+# Garmin es otro servicio (skylab-sync): el sync se llama antes y la
 # publicación en el reloj después. Esta API no depende de MCP; trabaja con lo
 # que ya está en Postgres.
 #
-# Todo salvo /health exige "Authorization: Bearer <PB_COACH_API_TOKEN>". Si el
+# Todo salvo /health exige "Authorization: Bearer <SKYLAB_API_TOKEN>". Si el
 # token no está configurado, la API se niega a operar en vez de quedar abierta.
 
 import hmac
@@ -33,7 +33,7 @@ from core.athlete import FichaAtleta
 from persistence import repository as repo
 from persistence.db import crear_engine, crear_sesiones
 
-app = FastAPI(title="pb-coach")
+app = FastAPI(title="skylab")
 
 
 # ---------- dependencias ----------
@@ -44,14 +44,14 @@ def obtener_sesiones_db() -> sessionmaker:
 
 
 def obtener_modelo() -> BaseChatModel:
-    # Proveedor y modelo según PB_COACH_MODELO (por defecto Claude Opus 5.5).
+    # Proveedor y modelo según SKYLAB_MODELO (por defecto Claude Opus 5.5).
     return crear_modelo()
 
 
 def exigir_token(authorization: Optional[str] = Header(default=None)) -> None:
-    esperado = os.environ.get("PB_COACH_API_TOKEN")
+    esperado = os.environ.get("SKYLAB_API_TOKEN")
     if not esperado:
-        raise HTTPException(status_code=503, detail="PB_COACH_API_TOKEN no está configurado")
+        raise HTTPException(status_code=503, detail="SKYLAB_API_TOKEN no está configurado")
     recibido = (authorization or "").removeprefix("Bearer ").strip()
     if not hmac.compare_digest(recibido, esperado):
         raise HTTPException(status_code=401, detail="Token inválido")

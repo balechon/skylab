@@ -1,17 +1,17 @@
 [project]
-name = "pb-coach-persistence"
+name = "skylab-persistence"
 version = "0.1.0"
-description = "Persistencia de PB_coach en Postgres: modelos SQLAlchemy, repositorio y migraciones Alembic."
+description = "Persistencia de SKYLAB en Postgres: modelos SQLAlchemy, repositorio y migraciones Alembic."
 requires-python = ">=3.12"
 dependencies = [
-    "pb-coach-core",
+    "skylab-core",
     "alembic>=1.13",
     "psycopg[binary]>=3",
     "sqlalchemy>=2",
 ]
 
 [tool.uv.sources]
-pb-coach-core = { workspace = true }
+skylab-core = { workspace = true }
 
 [build-system]
 requires = ["setuptools>=68"]

@@ -1,4 +1,4 @@
-# Lectura y escritura de pb-coach en Postgres, traduciendo entre filas y
+# Lectura y escritura de skylab en Postgres, traduciendo entre filas y
 # los modelos de domain/.
 #
 # Ninguna función hace commit: lo decide quien llama, para que una operación

@@ -9,7 +9,7 @@ CABECERA = {"Authorization": f"Bearer {TOKEN}"}
 
 @pytest.fixture
 def cliente(monkeypatch):
-    monkeypatch.setenv("PB_COACH_API_TOKEN", TOKEN)
+    monkeypatch.setenv("SKYLAB_API_TOKEN", TOKEN)
     app.dependency_overrides[obtener_sesiones_db] = lambda: None
     app.dependency_overrides[obtener_modelo] = lambda: None
     yield TestClient(app)
@@ -23,7 +23,7 @@ def test_health_no_necesita_token():
 
 
 def test_sin_token_configurado_la_api_no_opera(cliente, monkeypatch):
-    monkeypatch.delenv("PB_COACH_API_TOKEN")
+    monkeypatch.delenv("SKYLAB_API_TOKEN")
     assert cliente.post("/semana/ajustar", headers=CABECERA).status_code == 503
 
 

@@ -1,5 +1,5 @@
 # Fábrica del modelo de lenguaje. El agente no depende de un proveedor: el
-# modelo se elige con PB_COACH_MODELO ("proveedor:modelo", el formato de
+# modelo se elige con SKYLAB_MODELO ("proveedor:modelo", el formato de
 # init_chat_model de LangChain), p. ej. "anthropic:claude-opus-5-5" u
 # "openai:...". Cambiar de proveedor es cambiar esa variable (e instalar su
 # paquete langchain-<proveedor>).
@@ -29,7 +29,7 @@ OPCIONES_PROVEEDOR: dict[str, dict[str, Any]] = {
 
 
 def nombre_modelo() -> str:
-    return os.environ.get("PB_COACH_MODELO", MODELO_POR_DEFECTO)
+    return os.environ.get("SKYLAB_MODELO", MODELO_POR_DEFECTO)
 
 
 def proveedor(nombre: str) -> str:

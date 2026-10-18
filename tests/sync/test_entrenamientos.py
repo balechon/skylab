@@ -34,9 +34,9 @@ def test_series_por_tiempo_con_calentamiento_y_vuelta_a_la_calma():
         vuelta_calma=timedelta(minutes=10),
         descripcion="Series cortas, la última más rápida.",
     )
-    e = sesion_a_entrenamiento(sesion, origen="PB_coach p3 v5")
+    e = sesion_a_entrenamiento(sesion, origen="SKYLAB p3 v5")
 
-    assert e["workoutName"] == "PB 20/10 Series"
+    assert e["workoutName"] == "SKYLAB 20/10 Series"
     assert e["sportType"]["sportTypeKey"] == "running"
     calentamiento, series, vuelta = _pasos(e)
     assert (calentamiento["stepType"]["stepTypeKey"], calentamiento["endConditionValue"]) == ("warmup", 900.0)
@@ -51,7 +51,7 @@ def test_series_por_tiempo_con_calentamiento_y_vuelta_a_la_calma():
     assert [calentamiento["description"], trabajo["description"], recuperacion["description"], vuelta["description"]] == [
         "Warmup", "Series", "Rec", "Cooldown"
     ]
-    assert e["description"] == "Series cortas, la última más rápida.\nPista\nPB_coach p3 v5"
+    assert e["description"] == "Series cortas, la última más rápida.\nPista\nSKYLAB p3 v5"
 
 
 def test_fondo_de_trail_lleva_desnivel_y_terreno_en_las_notas():
@@ -76,7 +76,7 @@ def test_fondo_de_trail_lleva_desnivel_y_terreno_en_las_notas():
     assert e["description"].splitlines() == [
         "Sube andando las rampas fuertes; baja suelto.",
         "Sendero técnico · D+ 450 m · ~9 km",
-        "PB_coach",
+        "SKYLAB",
     ]
     assert principal["description"] == "Fondo"
 
@@ -110,9 +110,9 @@ def test_umbral_se_llama_umbral_y_la_recuperacion_regenerativo():
     def _sesion(tipo, clase):
         return SesionPlanificada(fecha=MARTES, clase_sesion=clase, tipo_sesion=tipo, duracion_objetivo=timedelta(minutes=40))
 
-    assert sesion_a_entrenamiento(_sesion(TipoSesion.UMBRAL, ClaseSesion.ESPECIFICO))["workoutName"] == "PB 20/10 Umbral"
+    assert sesion_a_entrenamiento(_sesion(TipoSesion.UMBRAL, ClaseSesion.ESPECIFICO))["workoutName"] == "SKYLAB 20/10 Umbral"
     assert sesion_a_entrenamiento(_sesion(TipoSesion.RECUPERACION, ClaseSesion.RECUPERACION))["workoutName"] == (
-        "PB 20/10 Regenerativo"
+        "SKYLAB 20/10 Regenerativo"
     )
 
 
@@ -141,7 +141,7 @@ def test_con_rangos_la_zona_va_en_pulsaciones_y_en_las_notas():
         zona_fc_objetivo=ZonasFC.Z2,
         calentamiento=timedelta(minutes=10),
     )
-    entrenamiento = sesion_a_entrenamiento(sesion, "PB_coach p1 v1", rangos)
+    entrenamiento = sesion_a_entrenamiento(sesion, "SKYLAB p1 v1", rangos)
     principal = entrenamiento["workoutSegments"][0]["workoutSteps"][1]
     assert principal["targetType"]["workoutTargetTypeKey"] == "heart.rate.zone"
     assert (principal["targetValueOne"], principal["targetValueTwo"]) == (134.0, 149.0)
@@ -159,7 +159,7 @@ def test_sin_rango_para_la_zona_se_usa_la_zona_del_reloj():
         duracion_objetivo=timedelta(minutes=40),
         zona_fc_objetivo=ZonasFC.Z3,
     )
-    entrenamiento = sesion_a_entrenamiento(sesion, "PB_coach", {ZonasFC.Z1: RangoFC(minimo=119, maximo=134)})
+    entrenamiento = sesion_a_entrenamiento(sesion, "SKYLAB", {ZonasFC.Z1: RangoFC(minimo=119, maximo=134)})
     paso = entrenamiento["workoutSegments"][0]["workoutSteps"][0]
     assert paso["zoneNumber"] == 3 and "targetValueOne" not in paso
     assert "FC" not in entrenamiento["description"]
@@ -177,7 +177,7 @@ def test_hill_sprints_sin_objetivo_de_fc_en_los_esfuerzos_cortos():
         intervalos=Intervalos(repeticiones=8, trabajo=timedelta(seconds=10), recuperacion=timedelta(minutes=2),
                               zona_fc_recuperacion=ZonasFC.REC),
     )
-    entrenamiento = sesion_a_entrenamiento(sesion, "PB_coach", rangos)
+    entrenamiento = sesion_a_entrenamiento(sesion, "SKYLAB", rangos)
     assert entrenamiento["workoutName"].endswith("Hill sprints")
     grupo = entrenamiento["workoutSegments"][0]["workoutSteps"][1]
     sprint, rec = grupo["workoutSteps"]

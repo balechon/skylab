@@ -1,4 +1,4 @@
-# Stack de PB_coach: postgres + pb-coach-api (API y agente) + pb-coach-sync
+# Stack de SKYLAB: postgres + skylab-api (API y agente) + skylab-sync
 # y garmin-mcp (Garmin: sync y publicar en el reloj).
 #
 # Sin superficie pública: la API y el sync se publican solo en 127.0.0.1 del
@@ -12,21 +12,25 @@
 #   3. POST :8001/publicar          próxima semana → reloj
 #
 #   docker compose up -d --build                   # postgres + api
-#   docker compose --profile garmin up -d --build  # + pb-coach-sync + garmin-mcp
+#   docker compose --profile garmin up -d --build  # + skylab-sync + garmin-mcp
 #   docker compose run --rm --build test           # tests en el contenedor
 #
-# Requiere un .env con las contraseñas de Postgres y PB_COACH_API_TOKEN
+# Requiere un .env con las contraseñas de Postgres y SKYLAB_API_TOKEN
 # (ver .env.example).
 
+# Nombre del proyecto fijo (no depende del nombre de la carpeta): de él salen
+# los nombres de los volúmenes (skylab_postgres-data, skylab_garmin-tokens).
+name: skylab
+
 services:
-  # Base pb_coach con su propio usuario. La crea docker/postgres/init.sql la
+  # Base skylab con su propio usuario. La crea docker/postgres/init.sql la
   # primera vez que se levanta el volumen.
   postgres:
     image: postgres:18.6-alpine
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Define POSTGRES_PASSWORD en .env}
-      PB_COACH_DB_PASSWORD: ${PB_COACH_DB_PASSWORD:?Define PB_COACH_DB_PASSWORD en .env}
+      SKYLAB_DB_PASSWORD: ${SKYLAB_DB_PASSWORD:?Define SKYLAB_DB_PASSWORD en .env}
       TZ: ${TZ:-America/Guayaquil}
     volumes:
       - postgres-data:/var/lib/postgresql
@@ -39,7 +43,8 @@ services:
     restart: unless-stopped
 
   # API + agente LLM. Sin MCP instalado. Aplica las migraciones al arrancar.
-  pb-coach-api:
+  skylab-api:
+    container_name: skylab-api
     build:
       context: .
       target: api
@@ -48,8 +53,8 @@ services:
     environment:
       TZ: ${TZ:-America/Guayaquil}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
-      PB_COACH_API_TOKEN: ${PB_COACH_API_TOKEN:-}
-      DATABASE_URL: postgresql+psycopg://pb_coach:${PB_COACH_DB_PASSWORD}@postgres:5432/pb_coach
+      SKYLAB_API_TOKEN: ${SKYLAB_API_TOKEN:-}
+      DATABASE_URL: postgresql+psycopg://skylab:${SKYLAB_DB_PASSWORD}@postgres:5432/skylab
     ports:
       - "127.0.0.1:8000:8000"
     depends_on:
@@ -60,34 +65,35 @@ services:
   # Garmin: sync de actividades y publicación de la semana en el reloj. Único
   # servicio con el SDK de MCP; no tiene la clave de Anthropic. Espera a que
   # la API haya aplicado las migraciones.
-  pb-coach-sync:
+  skylab-sync:
+    container_name: skylab-sync
     build:
       context: .
       target: sync
     profiles: ["garmin"]
     environment:
       TZ: ${TZ:-America/Guayaquil}
-      PB_COACH_API_TOKEN: ${PB_COACH_API_TOKEN:-}
-      DATABASE_URL: postgresql+psycopg://pb_coach:${PB_COACH_DB_PASSWORD}@postgres:5432/pb_coach
+      SKYLAB_API_TOKEN: ${SKYLAB_API_TOKEN:-}
+      DATABASE_URL: postgresql+psycopg://skylab:${SKYLAB_DB_PASSWORD}@postgres:5432/skylab
       GARMIN_MCP_URL: http://garmin-mcp:8000/mcp
     ports:
       - "127.0.0.1:8001:8000"
     depends_on:
-      pb-coach-api:
+      skylab-api:
         condition: service_healthy
       garmin-mcp:
         condition: service_started
     restart: unless-stopped
 
   # Tests (incluidos los de persistencia, en un esquema temporal de la base
-  # pb_coach que se borra al terminar).
+  # skylab que se borra al terminar).
   test:
     build:
       context: .
       target: test
     profiles: ["test"]
     environment:
-      TEST_DATABASE_URL: postgresql+psycopg://pb_coach:${PB_COACH_DB_PASSWORD}@postgres:5432/pb_coach
+      TEST_DATABASE_URL: postgresql+psycopg://skylab:${SKYLAB_DB_PASSWORD}@postgres:5432/skylab
     depends_on:
       postgres:
         condition: service_healthy

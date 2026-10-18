@@ -4,7 +4,7 @@
 #   POST /sync       Garmin → Postgres
 #   POST /publicar   próxima semana del plan vigente → Garmin (y al reloj)
 #
-# /sync y /publicar exigen "Authorization: Bearer <PB_COACH_API_TOKEN>".
+# /sync y /publicar exigen "Authorization: Bearer <SKYLAB_API_TOKEN>".
 #
 # Es un servicio aparte de la API para que MCP no conviva con FastAPI ni con
 # el agente: si garmin-mcp falla o no está levantado, solo falla /sync, y la
@@ -27,7 +27,7 @@ from sync.garmin import ClienteGarmin
 from sync.publicacion import NadaQuePublicar, publicar_semana
 from sync.sincronizacion import sincronizar_ahora
 
-log = logging.getLogger("pb_coach.sync")
+log = logging.getLogger("skylab.sync")
 
 
 @lru_cache
@@ -36,9 +36,9 @@ def sesiones_db() -> sessionmaker:
 
 
 def _error_de_token(request: Request) -> JSONResponse | None:
-    esperado = os.environ.get("PB_COACH_API_TOKEN")
+    esperado = os.environ.get("SKYLAB_API_TOKEN")
     if not esperado:
-        return JSONResponse({"detail": "PB_COACH_API_TOKEN no está configurado"}, status_code=503)
+        return JSONResponse({"detail": "SKYLAB_API_TOKEN no está configurado"}, status_code=503)
     recibido = request.headers.get("authorization", "").removeprefix("Bearer ").strip()
     if not hmac.compare_digest(recibido, esperado):
         return JSONResponse({"detail": "Token inválido"}, status_code=401)

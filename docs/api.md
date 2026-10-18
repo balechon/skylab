@@ -1,4 +1,4 @@
-# API de PB_coach
+# API de SKYLAB
 
 Dos servicios HTTP, publicados solo en `127.0.0.1` del host. En el VPS se
 llaman a través de un túnel SSH:
@@ -8,17 +8,17 @@ ssh -L 8000:localhost:8000 -L 8001:localhost:8001 usuario@vps
 ```
 
 Todas las llamadas (salvo `GET /health`) llevan la cabecera
-`Authorization: Bearer <PB_COACH_API_TOKEN>`. Sin token configurado, los
+`Authorization: Bearer <SKYLAB_API_TOKEN>`. Sin token configurado, los
 servicios responden 503.
 
 ## Servicios
 
 | Servicio | Puerto | Endpoints |
 |---|---|---|
-| pb-coach-api | 8000 | `POST /plan`, `POST /semana/ajustar` |
-| pb-coach-sync | 8001 | `POST /sync`, `POST /publicar` |
+| skylab-api | 8000 | `POST /plan`, `POST /semana/ajustar` |
+| skylab-sync | 8001 | `POST /sync`, `POST /publicar` |
 
-**pb-coach-api**
+**skylab-api**
 - `POST /plan` con `{"modo": "Construcción", "perfil": "<perfil>", "fecha_objetivo": "AAAA-MM-DD"}`
   (y `"carrera"` en modo Competición) → crea un ciclo nuevo. 404 si el perfil
   no existe; 422 si el perfil no define la secuencia de bloques del modo.
@@ -28,7 +28,7 @@ servicios responden 503.
 - Ambos responden `{estado, resumen, plan_id, version, accion,
   justificaciones, violaciones, detalle, tokens_entrada, tokens_salida}`.
 
-**pb-coach-sync**
+**skylab-sync**
 - `POST /sync` → actividades de Garmin a Postgres:
   `{ok, resultado: {desde, hasta, traidas, nuevas}}`.
 - `POST /publicar` → la próxima semana del plan vigente al calendario de
@@ -43,7 +43,7 @@ servicios responden 503.
 Por ahora se lanza a mano; cómo programarlo está pendiente de decidir.
 
 ```bash
-TOKEN=$(grep ^PB_COACH_API_TOKEN= .env | cut -d= -f2)
+TOKEN=$(grep ^SKYLAB_API_TOKEN= .env | cut -d= -f2)
 H="Authorization: Bearer $TOKEN"
 
 curl -X POST -H "$H" localhost:8001/sync              # 1. Garmin → Postgres
@@ -69,8 +69,8 @@ disponibilidad. Cada `PUT` guarda una versión nueva; cada ejecución del agente
 guarda una copia de la ficha con la que planificó.
 
 ```bash
-curl -X PUT -H "Authorization: Bearer $PB_COACH_API_TOKEN"      -H "Content-Type: application/json; charset=utf-8"      --data-binary @ficha.json localhost:8000/atleta
-curl -H "Authorization: Bearer $PB_COACH_API_TOKEN" localhost:8000/atleta
+curl -X PUT -H "Authorization: Bearer $SKYLAB_API_TOKEN"      -H "Content-Type: application/json; charset=utf-8"      --data-binary @ficha.json localhost:8000/atleta
+curl -H "Authorization: Bearer $SKYLAB_API_TOKEN" localhost:8000/atleta
 ```
 
 ```json

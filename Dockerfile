@@ -1,8 +1,8 @@
-# Imágenes de PB_coach. Un workspace de uv, una imagen por servicio; cada una
+# Imágenes de SKYLAB. Un workspace de uv, una imagen por servicio; cada una
 # copia e instala solo sus carpetas:
 #
-#   api   pb-coach-agent  core + persistence + agent (anthropic, fastapi). Sin MCP.
-#   sync  pb-coach-sync   core + persistence + sync (mcp). Sin FastAPI ni anthropic.
+#   api   skylab-agent  core + persistence + agent (anthropic, fastapi). Sin MCP.
+#   sync  skylab-sync   core + persistence + sync (mcp). Sin FastAPI ni anthropic.
 #   test  todo el workspace + grupo dev, para correr pytest.
 #
 # El código se instala (no editable) en /src/.venv y los procesos corren
@@ -38,7 +38,7 @@ COPY core core
 COPY persistence persistence
 COPY agent agent
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --package pb-coach-agent --no-dev --no-editable
+    uv sync --locked --package skylab-agent --no-dev --no-editable
 
 WORKDIR /app
 COPY methodology ./methodology
@@ -59,7 +59,7 @@ COPY core core
 COPY persistence persistence
 COPY sync sync
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --locked --package pb-coach-sync --no-dev --no-editable
+    uv sync --locked --package skylab-sync --no-dev --no-editable
 
 WORKDIR /app
 USER app

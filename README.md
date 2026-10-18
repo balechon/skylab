@@ -1,4 +1,4 @@
-# PB_coach
+# SKYLAB · Trail Running Coaching
 
 Coach personal de running/trail basado en un agente de IA. Planifica ciclos
 completos de entrenamiento según una metodología explícita, evalúa cada
@@ -33,13 +33,13 @@ El sistema es un motor híbrido:
 ## Flujo
 
 ```
-POST pb-coach-sync /sync ─────────▶ garmin-mcp ◀── Garmin Connect  (actividades → Postgres)
-POST pb-coach-api  /semana/ajustar ─┐
-POST pb-coach-api  /plan ───────────┤
+POST skylab-sync /sync ─────────▶ garmin-mcp ◀── Garmin Connect  (actividades → Postgres)
+POST skylab-api  /semana/ajustar ─┐
+POST skylab-api  /plan ───────────┤
                                     ▼
-                    pb-coach-api: agente LLM (propone) + motor determinista (decide)
+                    skylab-api: agente LLM (propone) + motor determinista (decide)
                                   + perfiles YAML + PostgreSQL (planes versionados)
-POST pb-coach-sync /publicar ─────▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
+POST skylab-sync /publicar ─────▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
 ```
 
 Por ahora el ciclo se lanza a mano (ver `docs/api.md`); la programación
@@ -53,11 +53,11 @@ Workspace de uv: cada carpeta es un paquete con su `pyproject.toml` y sus
 scripts directamente dentro (`from core.training import Plan`).
 
 ```
-core/           pb-coach-core         modelos (training, methodology) y motor determinista
+core/           skylab-core         modelos (training, methodology) y motor determinista
                                       (loader, calculator, validator, deviation). Sin IO.
-persistence/    pb-coach-persistence  Postgres: modelos, repositorio y migraciones Alembic
-sync/           pb-coach-sync         sync Garmin → Postgres vía MCP (garmin.py, app.py)
-agent/          pb-coach-agent        agente LLM (bucle, tools, guardia, servicio) + api.py
+persistence/    skylab-persistence  Postgres: modelos, repositorio y migraciones Alembic
+sync/           skylab-sync         sync Garmin → Postgres vía MCP (garmin.py, app.py)
+agent/          skylab-agent        agente LLM (bucle, tools, guardia, servicio) + api.py
 methodology/    Perfiles de metodología (YAML)
 tests/          Tests de todo el workspace
 docs/           Visión, decisiones, contrato de la API y diagramas
@@ -69,7 +69,7 @@ docker/         Inicialización de Postgres
 - Hecho: modelos de dominio alineados con la visión (modos construcción /
   competición, tres niveles de detalle, sesión planificada vs. realizada,
   reglas de ajuste), loader de perfiles, perfil didáctico, API con `/health`
-  y stack Docker (postgres + pb-coach + garmin-mcp), todo con tests.
+  y stack Docker (postgres + skylab + garmin-mcp), todo con tests.
 - Hecho también: motor determinista completo (`core/calculator.py`,
   `validator.py`, `deviation.py`) y Postgres en el stack.
 - Hecho también: persistencia en Postgres (`persistence/`, SQLAlchemy +
@@ -77,7 +77,7 @@ docker/         Inicialización de Postgres
 - Hecho también: sync de Garmin (`sync/`) y agente LLM (`agent/`:
   bucle de tool use con Claude, guardia final y servicio que persiste),
   expuesto en la API (`POST /plan`, `POST /semana/ajustar`); el sync es un
-  servicio aparte (`pb-coach-sync`, `POST /sync`).
+  servicio aparte (`skylab-sync`, `POST /sync`).
 - Hecho también: publicar la semana en el reloj (`POST /publicar`).
 - Siguiente: migrar el agente a LangGraph, pipeline de observabilidad,
   programación automática del ciclo semanal y el primer perfil real.
@@ -90,7 +90,7 @@ fijado en `.python-version`; versiones exactas en `uv.lock`):
 ```bash
 uv sync --all-packages   # .venv con los cuatro paquetes + grupo dev
 uv run pytest            # tests (los de Postgres se saltan sin TEST_DATABASE_URL)
-uv add --package pb-coach-agent <paquete>   # dependencia para un paquete concreto
+uv add --package skylab-agent <paquete>   # dependencia para un paquete concreto
 ```
 
 ## Docker
@@ -98,10 +98,10 @@ uv add --package pb-coach-agent <paquete>   # dependencia para un paquete concre
 Una imagen por servicio, cada una con solo su paquete:
 
 ```bash
-docker compose up -d --build                    # postgres + pb-coach-api (127.0.0.1:8000)
-docker compose --profile garmin up -d --build   # + pb-coach-sync + garmin-mcp
+docker compose up -d --build                    # postgres + skylab-api (127.0.0.1:8000)
+docker compose --profile garmin up -d --build   # + skylab-sync + garmin-mcp
 docker compose run --rm --build test            # todos los tests, incluidos los de Postgres
-docker compose exec pb-coach-sync python -m sync   # sync manual
+docker compose exec skylab-sync python -m sync   # sync manual
 ```
 
 `garmin-mcp` necesita tus credenciales de Garmin en `secrets/` (ignorado por

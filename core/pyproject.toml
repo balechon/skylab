@@ -1,7 +1,7 @@
 [project]
-name = "pb-coach-core"
+name = "skylab-core"
 version = "0.1.0"
-description = "Dominio y motor determinista de PB_coach: modelos, loader, calculator, validator, deviation. Sin IO."
+description = "Dominio y motor determinista de SKYLAB: modelos, loader, calculator, validator, deviation. Sin IO."
 requires-python = ">=3.12"
 dependencies = [
     "pydantic>=2",

@@ -1,4 +1,4 @@
-# Servicio de sync Garmin → Postgres (pb-coach-sync).
+# Servicio de sync Garmin → Postgres (skylab-sync).
 #
 #   sincronizacion.py  lógica del sync
 #   app.py             HTTP mínimo (POST /sync, POST /publicar)

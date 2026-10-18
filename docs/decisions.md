@@ -130,7 +130,7 @@ propia de una indicación cualitativa.
 
 ## 2026-10-06 — API HTTP mínima + docker-compose con n8n
 
-**Decisión**: `pb-coach` expone una API HTTP mínima (`POST /plan`,
+**Decisión**: `skylab` expone una API HTTP mínima (`POST /plan`,
 `POST /semana/ajustar`) y corre en Docker junto a n8n en un mismo host vía
 `docker-compose`. No se expone a internet; solo n8n la llama, con un token
 compartido.
@@ -140,7 +140,7 @@ invocarlo. Mantenerlo interno evita tener que endurecer un servicio público.
 
 ## 2026-10-06 — Persistencia en SQLite
 
-> **Reemplazada (2026-10-06)** por "Postgres para pb-coach y n8n", más abajo.
+> **Reemplazada (2026-10-06)** por "Postgres para skylab y n8n", más abajo.
 
 **Decisión**: SQLite en un volumen de Docker para planes versionados,
 sesiones realizadas y registro de ejecuciones del agente (incluido el
@@ -156,7 +156,7 @@ servidor de base de datos (Postgres) es complejidad sin beneficio.
 entrenamientos de la próxima semana se publican en el reloj, a través de
 [Taxuspt/garmin_mcp](https://github.com/Taxuspt/garmin_mcp) corriendo como
 contenedor propio (`garmin-mcp`) en el docker-compose, con versión fijada.
-`pb-coach` es su cliente MCP (`mcp_client/garmin.py`) y solo usa una lista
+`skylab` es su cliente MCP (`mcp_client/garmin.py`) y solo usa una lista
 blanca de tools. El LLM nunca ve ese servidor: la lectura (sync → base de datos) y
 la escritura (publicar la semana) son pasos deterministas fuera del bucle
 del agente. Las sesiones de running se publican generando el JSON del
@@ -183,11 +183,11 @@ re-autenticar con MFA es manual — n8n debe avisar cuando falle el login.
 
 ## 2026-10-06 — Despliegue en VPS de Hostinger
 
-**Decisión**: el `docker-compose` (`n8n`, `pb-coach`, `garmin-mcp`) corre en
+**Decisión**: el `docker-compose` (`n8n`, `skylab`, `garmin-mcp`) corre en
 el VPS de Hostinger del usuario, donde vive n8n.
 
 **Por qué**: el VPS ya existe y ya aloja n8n; un solo host con red interna
-de Docker evita exponer `pb-coach` y `garmin-mcp`.
+de Docker evita exponer `skylab` y `garmin-mcp`.
 
 ## 2026-10-06 — Metodologías: Uphill Athlete y Nacho Martínez
 
@@ -207,14 +207,14 @@ específica en español, útil sobre todo para el modo competición.
 **Decisión**: el `docker-compose` del proyecto incluye su propio n8n
 (`n8nio/n8n`, versión fijada). Solo n8n publica un puerto, y únicamente en
 `127.0.0.1` del VPS; al editor se entra con un túnel SSH
-(`ssh -L 5678:localhost:5678 usuario@vps`). `pb-coach` y `garmin-mcp` no
-publican puertos: n8n llama a `pb-coach` por la red interna de Docker. Zona
+(`ssh -L 5678:localhost:5678 usuario@vps`). `skylab` y `garmin-mcp` no
+publican puertos: n8n llama a `skylab` por la red interna de Docker. Zona
 horaria del stack: `America/Guayaquil`.
 
 **Por qué**: un n8n propio deja el proyecto autocontenido (un solo
 `docker compose up`, workflows versionables en el repo) y aislado del n8n de
 automatizaciones personales. Nada de lo que hace este n8n (cron, llamar a
-pb-coach, enviar a Telegram) necesita conexiones entrantes, así que el stack
+skylab, enviar a Telegram) necesita conexiones entrantes, así que el stack
 queda sin superficie pública — importante porque garmin-mcp tiene acceso a la
 cuenta de Garmin. Si en el futuro se quiere exponer (p. ej. un bot de
 Telegram con trigger entrante), se hará en una nueva versión que se conecte
@@ -279,19 +279,19 @@ evaluable. Las métricas de progreso entran como `metricas_externas`.
 progresar. Deducir el tipo de sesión (Tempo, Umbral o Series) solo por la
 zona sería adivinar, así que `SesionRealizada` admite clase sin tipo.
 
-## 2026-10-06 — Postgres para pb-coach y n8n (reemplaza a SQLite)
+## 2026-10-06 — Postgres para skylab y n8n (reemplaza a SQLite)
 
 **Decisión**: un servicio `postgres` (18.6) en el compose, sin puertos
-publicados, con dos bases separadas — `n8n` y `pb_coach` —, cada una con su
+publicados, con dos bases separadas — `n8n` y `skylab` —, cada una con su
 usuario y sin permiso de conexión a la otra (`docker/postgres/init.sql`).
-n8n deja su SQLite interno y usa su base; pb-coach usará la suya vía
+n8n deja su SQLite interno y usa su base; skylab usará la suya vía
 SQLAlchemy + Alembic, guardando las versiones del plan como JSONB. El
-contenedor pb-coach recibe solo sus variables, nunca la contraseña del
+contenedor skylab recibe solo sus variables, nunca la contraseña del
 superusuario.
 
 **Por qué**: con Docker Compose ya en marcha, la ventaja de SQLite (no
 levantar un servidor) pesa poco, y Postgres da: una sola base robusta para
-n8n y pb-coach con un único punto de backup (`pg_dump`), JSONB para
+n8n y skylab con un único punto de backup (`pg_dump`), JSONB para
 consultar dentro de los planes versionados (qué cambió entre versiones,
 qué acciones de ajuste se aplicaron) y el flujo estándar de un proyecto
 real (ORM + migraciones). Coste: un contenedor más (~50–100 MB) y tests de
@@ -304,7 +304,7 @@ tests no cambian.
 (cada versión completa como JSONB, inmutable, con el motivo del cambio),
 `sesion_realizada` (columnas normales, `garmin_activity_id` único para que
 el sync sea idempotente) y `ejecucion_agente` (resultado y tokens). El
-esquema lo gestiona Alembic con migraciones escritas a mano; pb-coach las
+esquema lo gestiona Alembic con migraciones escritas a mano; skylab las
 aplica al arrancar. El repositorio no hace commit (lo decide quien llama,
 para que un ajuste semanal sea todo o nada) y vuelve a validar con Pydantic
 cada plan que lee. Los tests de persistencia corren contra Postgres real en
@@ -331,7 +331,7 @@ diferencias de comportamiento que tendría una base de pruebas distinta.
   (`segundos_por_zona`) en vez de una sola zona, y **las sesiones ya no se
   clasifican por zona**: solo heredan la clase de la sesión planificada del
   mismo día; sin pareja quedan sin clasificar.
-- `pb_coach.sync` trae desde la última fecha guardada (la primera vez, 56
+- `skylab.sync` trae desde la última fecha guardada (la primera vez, 56
   días de línea base) y guarda sin duplicar.
 
 **Por qué**: en montaña el pulso sube en las subidas aunque el esfuerzo sea
@@ -375,14 +375,14 @@ motor; queda pendiente.
 ## 2026-10-11 — Workspace de uv y una imagen por servicio; MCP aislado
 
 **Decisión**: el código pasa a un workspace de uv con cuatro paquetes, cada
-uno con su `pyproject.toml` y solo sus dependencias: `pb-coach-core`
-(domain + engine: pydantic, pyyaml), `pb-coach-persistence` (sqlalchemy,
-alembic, psycopg), `pb-coach-sync` (mcp) y `pb-coach-api` (anthropic,
-fastapi). `pb_coach` es un namespace package compartido, así que los imports
-no cambian. Hay dos imágenes de runtime por proceso: `pb-coach-api` (API +
-agente, sin MCP) y `pb-coach-sync` (sync de Garmin, sin FastAPI ni la clave de
+uno con su `pyproject.toml` y solo sus dependencias: `skylab-core`
+(domain + engine: pydantic, pyyaml), `skylab-persistence` (sqlalchemy,
+alembic, psycopg), `skylab-sync` (mcp) y `skylab-api` (anthropic,
+fastapi). `skylab` es un namespace package compartido, así que los imports
+no cambian. Hay dos imágenes de runtime por proceso: `skylab-api` (API +
+agente, sin MCP) y `skylab-sync` (sync de Garmin, sin FastAPI ni la clave de
 Anthropic), más una de tests con todo. La API ya no sincroniza: n8n llama
-primero a `pb-coach-sync /sync` y después a `pb-coach-api`.
+primero a `skylab-sync /sync` y después a `skylab-api`.
 
 **Por qué**: el SDK de MCP es la dependencia más pesada y comparte base
 (starlette) con FastAPI; separarlas evita que un conflicto de versiones o un
@@ -398,11 +398,11 @@ resuelven juntas); lo que cambia es qué se instala en cada imagen
 
 ## 2026-10-11 — Estructura plana: cada carpeta es un paquete
 
-**Decisión**: se quitan los niveles `packages/` y `src/pb_coach/`. Cada
+**Decisión**: se quitan los niveles `packages/` y `src/skylab/`. Cada
 paquete del workspace es una carpeta en la raíz con su `pyproject.toml` y sus
 scripts directamente dentro, y se importa por su nombre: `core` (antes
 domain + engine, aplanados), `persistence`, `sync` (cliente MCP de Garmin +
-servicio de sync) y `agent` (agente + `api.py`; paquete `pb-coach-agent`).
+servicio de sync) y `agent` (agente + `api.py`; paquete `skylab-agent`).
 Las imágenes copian solo sus carpetas e instalan el código no editable en
 `/src/.venv`, corriendo desde `/app`: en la imagen de la API no se puede
 importar `sync`, ni `agent` en la del sync.
@@ -459,7 +459,7 @@ planes guardados.
 **Decisión**: se quita n8n del proyecto (servicio, volumen, su base en
 Postgres para instalaciones nuevas y sus variables). La API (8000) y el
 servicio de Garmin (8001) se publican solo en `127.0.0.1` del host; en el VPS
-se llaman por túnel SSH, siempre con `PB_COACH_API_TOKEN`. El ciclo semanal
+se llaman por túnel SSH, siempre con `SKYLAB_API_TOKEN`. El ciclo semanal
 (sync → ajuste → publicar) se lanza a mano con tres llamadas (ver
 `docs/api.md`); cómo programarlo queda pendiente de decidir.
 
@@ -474,7 +474,7 @@ VPS).
 **Decisión**: el bucle manual sobre el SDK de Anthropic se reemplaza por un
 grafo de LangGraph (`agent/agente.py`: nodos modelo, herramientas y
 recordatorio) y el modelo llega como `BaseChatModel` de LangChain. El modelo
-se elige con `PB_COACH_MODELO` ("proveedor:modelo", por defecto
+se elige con `SKYLAB_MODELO` ("proveedor:modelo", por defecto
 `anthropic:claude-opus-5-5`); lo específico de cada proveedor vive solo en
 `agent/modelo.py` (en Anthropic: `effort` alto, `fallbacks: "default"` y caché
 del system). Las tools se definen en formato neutro y se enlazan con
@@ -629,3 +629,19 @@ cuentan como no comparables y se clasifican, aproximadamente, por su FC media.
 zonas. En la primera creación del plan, el agente leyó el historial con las
 zonas antiguas (por FC máxima) y concluyó que el atleta entrenaba casi todo en
 Z3–Z4, cuando con su umbral aeróbico eran rodajes en Z2.
+
+## 2026-10-18 — El proyecto pasa a llamarse SKYLAB
+
+**Decisión**: nombre general **SKYLAB · Trail Running Coaching**, nombre corto
+**SKYLAB**. Se renombran los paquetes (`skylab-core`, `skylab-persistence`,
+`skylab-sync`, `skylab-agent`), los servicios y contenedores (`skylab-api`,
+`skylab-sync`), la base y su usuario (`skylab`), las variables de entorno
+(`SKYLAB_*`), el prefijo de los entrenamientos del reloj ("SKYLAB 20/10
+Base") y su origen en las notas ("SKYLAB p4 v1"). El proyecto de Compose
+fija `name: skylab` para no depender del nombre de la carpeta.
+
+**Migración**: los volúmenes `pb_coach_*` se copiaron a `skylab_*` (los
+originales quedan como copia de seguridad hasta comprobar el nuevo stack) y
+la base y el rol se renombraron con `ALTER DATABASE/ROLE ... RENAME`, sin
+tocar los datos. Los tokens de Garmin se conservan: no hace falta volver a
+iniciar sesión.

@@ -1,11 +1,11 @@
 [project]
-name = "pb-coach-agent"
+name = "skylab-agent"
 version = "0.1.0"
-description = "Agente LLM y API de PB_coach. No depende de MCP."
+description = "Agente LLM y API de SKYLAB. No depende de MCP."
 requires-python = ">=3.12"
 dependencies = [
-    "pb-coach-core",
-    "pb-coach-persistence",
+    "skylab-core",
+    "skylab-persistence",
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "langgraph>=1.2.16",
@@ -14,8 +14,8 @@ dependencies = [
 ]
 
 [tool.uv.sources]
-pb-coach-core = { workspace = true }
-pb-coach-persistence = { workspace = true }
+skylab-core = { workspace = true }
+skylab-persistence = { workspace = true }
 
 [build-system]
 requires = ["setuptools>=68"]

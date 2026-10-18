@@ -1,4 +1,4 @@
-# Tablas de pb-coach (SQLAlchemy 2). El esquema lo crea y lo evoluciona
+# Tablas de skylab (SQLAlchemy 2). El esquema lo crea y lo evoluciona
 # Alembic (migrations/); estos modelos son su reflejo en Python.
 #
 # Los modelos de dominio (domain/) no conocen la base de datos: la

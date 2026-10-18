@@ -23,7 +23,7 @@ from persistence import repository as repo
 from sync.entrenamientos import nombre_entrenamiento, sesion_a_entrenamiento
 from sync.garmin import ClienteGarmin, ErrorGarmin
 
-log = logging.getLogger("pb_coach.sync.publicacion")
+log = logging.getLogger("skylab.sync.publicacion")
 
 
 class NadaQuePublicar(RuntimeError):
@@ -90,7 +90,7 @@ async def publicar_semana(
                 repo.marcar_retirada(db, previa.id)
             resultado.retirados += 1
 
-    origen = f"PB_coach p{plan_id} v{plan.version}"
+    origen = f"SKYLAB p{plan_id} v{plan.version}"
     for sesion in sesiones:
         workout_id = await cliente.subir_entrenamiento(sesion_a_entrenamiento(sesion, origen, plan.rangos_fc))
         await cliente.programar(workout_id, sesion.fecha)

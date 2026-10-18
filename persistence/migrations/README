@@ -1,4 +1,4 @@
-Migraciones de la base de pb-coach (Alembic).
+Migraciones de la base de skylab (Alembic).
 
     alembic upgrade head          # aplica todas (el contenedor lo hace al arrancar)
     alembic revision -m "..."     # nueva migración, escrita a mano en versions/

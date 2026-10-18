@@ -2,10 +2,10 @@
 # paquete con su pyproject.toml y solo sus dependencias; cada imagen Docker
 # instala solo el suyo:
 #
-#   core/         pb-coach-core         modelos y motor determinista (sin IO)
-#   persistence/  pb-coach-persistence  Postgres + migraciones
-#   sync/         pb-coach-sync         sync de Garmin (único con MCP)
-#   agent/        pb-coach-agent        agente LLM + API
+#   core/         skylab-core         modelos y motor determinista (sin IO)
+#   persistence/  skylab-persistence  Postgres + migraciones
+#   sync/         skylab-sync         sync de Garmin (único con MCP)
+#   agent/        skylab-agent        agente LLM + API
 #
 #   uv sync --all-packages     # entorno de desarrollo con todo
 #   uv run pytest

@@ -27,7 +27,7 @@ def _cliente(sincronizar=_sincroniza_bien):
 
 @pytest.fixture(autouse=True)
 def token(monkeypatch):
-    monkeypatch.setenv("PB_COACH_API_TOKEN", TOKEN)
+    monkeypatch.setenv("SKYLAB_API_TOKEN", TOKEN)
 
 
 def test_health_no_necesita_token():
@@ -36,7 +36,7 @@ def test_health_no_necesita_token():
 
 def test_sync_exige_token(monkeypatch):
     assert _cliente().post("/sync").status_code == 401
-    monkeypatch.delenv("PB_COACH_API_TOKEN")
+    monkeypatch.delenv("SKYLAB_API_TOKEN")
     assert _cliente().post("/sync", headers=CABECERA).status_code == 503
 
 

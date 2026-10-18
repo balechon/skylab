@@ -1,19 +1,19 @@
 [project]
-name = "pb-coach-sync"
+name = "skylab-sync"
 version = "0.1.0"
 description = "Servicio de sync Garmin -> Postgres vía garmin-mcp. Único paquete que depende del SDK de MCP."
 requires-python = ">=3.12"
 dependencies = [
-    "pb-coach-core",
-    "pb-coach-persistence",
+    "skylab-core",
+    "skylab-persistence",
     "mcp>=1.9",
     "starlette",
     "uvicorn>=0.30",
 ]
 
 [tool.uv.sources]
-pb-coach-core = { workspace = true }
-pb-coach-persistence = { workspace = true }
+skylab-core = { workspace = true }
+skylab-persistence = { workspace = true }
 
 [build-system]
 requires = ["setuptools>=68"]

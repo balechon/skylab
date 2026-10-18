@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from core.training import ClaseSesion, RangoFC, SesionPlanificada, TipoSesion, ZonasFC
 
-PREFIJO_NOMBRE = "PB"  # identifica en la biblioteca de Garmin lo que crea PB_coach
+PREFIJO_NOMBRE = "SKYLAB"  # identifica en la biblioteca de Garmin lo que crea SKYLAB
 
 _DEPORTE = {"sportTypeId": 1, "sportTypeKey": "running"}
 _PASO = {
@@ -101,7 +101,7 @@ def notas(sesion: SesionPlanificada, origen: str, rangos: Optional[dict[ZonasFC,
 
         Sube andando las rampas; baja suelto.
         FC 119-134 · Sendero técnico · D+ 450 m · ~9 km
-        PB_coach p3 v5
+        SKYLAB p3 v5
     """
     datos = []
     rango = (rangos or {}).get(sesion.zona_fc_objetivo) if sesion.zona_fc_objetivo else None
@@ -122,11 +122,11 @@ def notas(sesion: SesionPlanificada, origen: str, rangos: Optional[dict[ZonasFC,
 
 
 def sesion_a_entrenamiento(
-    sesion: SesionPlanificada, origen: str = "PB_coach", rangos: Optional[dict[ZonasFC, RangoFC]] = None
+    sesion: SesionPlanificada, origen: str = "SKYLAB", rangos: Optional[dict[ZonasFC, RangoFC]] = None
 ) -> Optional[dict[str, Any]]:
     """JSON de entrenamiento de Garmin para una sesión, o None si es descanso.
 
-    `origen` se añade al final de las notas (p. ej. "PB_coach p3 v5")
+    `origen` se añade al final de las notas (p. ej. "SKYLAB p3 v5")
     para saber de qué versión del plan sale cada entrenamiento. Con `rangos`
     (Plan.rangos_fc), cada zona va al reloj en las pulsaciones del atleta.
     """

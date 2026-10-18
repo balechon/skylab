@@ -1,4 +1,4 @@
-# Visión de PB_coach
+# Visión de SKYLAB
 
 Definida el 2026-10-06. Este documento fija **qué** construimos y **por qué**;
 el **cómo** de cada decisión vive en `docs/decisions.md`.
@@ -99,17 +99,17 @@ El perfil de metodología, además de describir cómo es un plan válido, define
 ```
 VPS Hostinger · docker-compose (todo publicado solo en 127.0.0.1)
 
-pb-coach-sync  POST /sync      ◀── garmin-mcp ◀── Garmin Connect   (actividades → Postgres)
-pb-coach-api   POST /plan
+skylab-sync  POST /sync      ◀── garmin-mcp ◀── Garmin Connect   (actividades → Postgres)
+skylab-api   POST /plan
                POST /semana/ajustar
                  ├─ agente LLM (propone)
                  ├─ motor determinista (decide)
                  ├─ perfiles YAML (metodología)
                  └─ PostgreSQL (planes versionados, sesiones, ejecuciones)
-pb-coach-sync  POST /publicar  ──▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
+skylab-sync  POST /publicar  ──▶ garmin-mcp ──▶ calendario de Garmin ──▶ reloj
 ```
 
-- `docker-compose` con `postgres`, `pb-coach-api`, `pb-coach-sync` y
+- `docker-compose` con `postgres`, `skylab-api`, `skylab-sync` y
   `garmin-mcp` en el VPS de Hostinger.
 - Nada se expone a internet: la API (8000) y el servicio de Garmin (8001)
   solo escuchan en `127.0.0.1` y se llaman por túnel SSH, con un token.

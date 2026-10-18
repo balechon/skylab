@@ -1,7 +1,7 @@
 # Uso manual dentro del contenedor:
-#   docker compose exec pb-coach-sync python -m sync            # Garmin → Postgres
-#   docker compose exec pb-coach-sync python -m sync publicar   # próxima semana → reloj
-#   docker compose exec pb-coach-sync python -m sync rellenar-zonas 2026-08-01
+#   docker compose exec skylab-sync python -m sync            # Garmin → Postgres
+#   docker compose exec skylab-sync python -m sync publicar   # próxima semana → reloj
+#   docker compose exec skylab-sync python -m sync rellenar-zonas 2026-08-01
 #       # rellena los límites de zona de las actividades ya guardadas
 
 import asyncio

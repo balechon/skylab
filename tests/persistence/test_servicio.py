@@ -80,7 +80,7 @@ def test_perfil_sin_secuencia_para_el_modo_no_llama_al_modelo(sesiones_db, monke
     perfil = (servicio.perfiles_dir() / "ejemplo_didactico.yaml").read_text(encoding="utf-8")
     sin_secuencias = perfil[: perfil.index("secuencias_bloques:")]
     (tmp_path / "sin_bloques.yaml").write_text(sin_secuencias, encoding="utf-8")
-    monkeypatch.setenv("PB_COACH_PERFILES_DIR", str(tmp_path))
+    monkeypatch.setenv("SKYLAB_PERFILES_DIR", str(tmp_path))
 
     solicitud = contexto_ciclo().solicitud.model_copy(update={"perfil": "sin_bloques"})
     modelo = ModeloFalso(respuestas=[])
@@ -181,7 +181,7 @@ zonas_fc:
     Z2: { desde: { ancla: "AeT", pct: -10 }, hasta: { ancla: "AeT" } }
 """
     (tmp_path / "ejemplo_didactico.yaml").write_text(perfil + zonas, encoding="utf-8")
-    monkeypatch.setenv("PB_COACH_PERFILES_DIR", str(tmp_path))
+    monkeypatch.setenv("SKYLAB_PERFILES_DIR", str(tmp_path))
     with sesiones_db.begin() as db:
         repo.guardar_ficha(db, FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149)))
 

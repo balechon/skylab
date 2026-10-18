@@ -23,9 +23,9 @@ from core.loader import cargar_perfil
 from persistence import repository as repo
 
 def perfiles_dir() -> Path:
-    """Carpeta de perfiles YAML: PB_COACH_PERFILES_DIR, o methodology/profiles
+    """Carpeta de perfiles YAML: SKYLAB_PERFILES_DIR, o methodology/profiles
     relativa al directorio de trabajo (la raíz del repo, o /app en Docker)."""
-    return Path(os.environ.get("PB_COACH_PERFILES_DIR", "methodology/profiles"))
+    return Path(os.environ.get("SKYLAB_PERFILES_DIR", "methodology/profiles"))
 SEMANAS_DE_HISTORIAL = 16
 
 

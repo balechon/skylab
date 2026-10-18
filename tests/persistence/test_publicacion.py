@@ -70,7 +70,7 @@ def test_primera_publicacion_sube_y_programa_las_sesiones_con_carga(sesiones_db)
     r = asyncio.run(publicar_semana(sesiones_db, garmin, hoy=HOY))
 
     # La semana detallada tiene 5 sesiones: 2 descansos (no se publican) y 3 con carga.
-    assert [p.nombre for p in r.publicados] == ["PB 13/10 Series", "PB 14/10 Regenerativo", "PB 15/10 Base"]
+    assert [p.nombre for p in r.publicados] == ["SKYLAB 13/10 Series", "SKYLAB 14/10 Regenerativo", "SKYLAB 15/10 Base"]
     assert [ll[0] for ll in garmin.llamadas] == ["subir", "programar"] * 3
     with sesiones_db() as db:
         guardadas = repo.publicaciones_activas(db, HOY, HOY.replace(day=31))
