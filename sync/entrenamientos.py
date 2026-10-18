@@ -12,7 +12,7 @@
 
 from typing import Any, Optional
 
-from core.training import ClaseSesion, SesionPlanificada, TipoSesion, ZonasFC
+from core.training import ClaseSesion, RangoFC, SesionPlanificada, TipoSesion, ZonasFC
 
 PREFIJO_NOMBRE = "PB"  # identifica en la biblioteca de Garmin lo que crea PB_coach
 
@@ -46,6 +46,7 @@ def _paso(
     metros: Optional[float] = None,
     zona: Optional[ZonasFC] = None,
     descripcion: Optional[str] = None,
+    rangos: Optional[dict[ZonasFC, RangoFC]] = None,
 ) -> dict[str, Any]:
     paso: dict[str, Any] = {"type": "ExecutableStepDTO", "stepOrder": orden, "stepType": _PASO[tipo]}
     if descripcion:
@@ -56,8 +57,14 @@ def _paso(
     else:
         paso["endCondition"] = {"conditionTypeId": 3, "conditionTypeKey": "distance"}
         paso["endConditionValue"] = float(round(metros))
+    rango = (rangos or {}).get(zona) if zona is not None else None
     if zona is None:
         paso["targetType"] = _SIN_OBJETIVO
+    elif rango is not None:
+        # Pulsaciones propias del atleta: rango a medida, no la zona de Garmin.
+        paso["targetType"] = _ZONA_FC
+        paso["targetValueOne"] = float(rango.minimo)
+        paso["targetValueTwo"] = float(rango.maximo)
     else:
         # Zona con nombre: zoneNumber, nunca en targetValueOne (ver la doc de upload_workout).
         paso["targetType"] = _ZONA_FC
@@ -75,15 +82,18 @@ def nombre_entrenamiento(sesion: SesionPlanificada) -> str:
     return f"{PREFIJO_NOMBRE} {sesion.fecha:%d/%m} {etiqueta_sesion(sesion)}"
 
 
-def notas(sesion: SesionPlanificada, origen: str) -> str:
-    """Notas cortas: la indicación de la sesión, una línea con terreno, D+ y
-    km orientativos, y el origen. Ej.:
+def notas(sesion: SesionPlanificada, origen: str, rangos: Optional[dict[ZonasFC, RangoFC]] = None) -> str:
+    """Notas cortas: la indicación de la sesión, una línea con FC, terreno,
+    D+ y km orientativos, y el origen. Ej.:
 
         Sube andando las rampas; baja suelto.
-        Sendero técnico · D+ 450 m · ~9 km
+        FC 119-134 · Sendero técnico · D+ 450 m · ~9 km
         PB_coach p3 v5
     """
     datos = []
+    rango = (rangos or {}).get(sesion.zona_fc_objetivo) if sesion.zona_fc_objetivo else None
+    if rango is not None:
+        datos.append(f"FC {rango.minimo}-{rango.maximo}")
     if sesion.terreno is not None:
         datos.append(sesion.terreno.value)
     if sesion.desnivel_positivo_objetivo_m:
@@ -98,11 +108,14 @@ def notas(sesion: SesionPlanificada, origen: str) -> str:
     return "\n".join(lineas)
 
 
-def sesion_a_entrenamiento(sesion: SesionPlanificada, origen: str = "PB_coach") -> Optional[dict[str, Any]]:
+def sesion_a_entrenamiento(
+    sesion: SesionPlanificada, origen: str = "PB_coach", rangos: Optional[dict[ZonasFC, RangoFC]] = None
+) -> Optional[dict[str, Any]]:
     """JSON de entrenamiento de Garmin para una sesión, o None si es descanso.
 
     `origen` se añade al final de las notas (p. ej. "PB_coach p3 v5")
-    para saber de qué versión del plan sale cada entrenamiento.
+    para saber de qué versión del plan sale cada entrenamiento. Con `rangos`
+    (Plan.rangos_fc), cada zona va al reloj en las pulsaciones del atleta.
     """
     if sesion.clase_sesion == ClaseSesion.DESCANSO:
         return None
@@ -120,10 +133,11 @@ def sesion_a_entrenamiento(sesion: SesionPlanificada, origen: str = "PB_coach") 
 
     if sesion.intervalos is not None:
         i = sesion.intervalos
-        series = [_paso(1, "trabajo", segundos=i.trabajo.total_seconds(), zona=sesion.zona_fc_objetivo, descripcion=trabajo)]
+        series = [_paso(1, "trabajo", segundos=i.trabajo.total_seconds(), zona=sesion.zona_fc_objetivo, descripcion=trabajo,
+                        rangos=rangos)]
         if i.recuperacion.total_seconds() > 0:
             series.append(_paso(2, "recuperacion", segundos=i.recuperacion.total_seconds(), zona=i.zona_fc_recuperacion,
-                                descripcion=_ETIQUETA_PASO["recuperacion"]))
+                                descripcion=_ETIQUETA_PASO["recuperacion"], rangos=rangos))
         pasos.append(
             {
                 "type": "RepeatGroupDTO",
@@ -139,10 +153,10 @@ def sesion_a_entrenamiento(sesion: SesionPlanificada, origen: str = "PB_coach") 
     elif sesion.duracion_objetivo is not None:
         principal = sesion.duracion_objetivo - sesion.duracion_estructura
         pasos.append(_paso(siguiente(), "trabajo", segundos=principal.total_seconds(), zona=sesion.zona_fc_objetivo,
-                           descripcion=trabajo))
+                           descripcion=trabajo, rangos=rangos))
     else:
         pasos.append(_paso(siguiente(), "trabajo", metros=sesion.distancia_objetivo_km * 1000, zona=sesion.zona_fc_objetivo,
-                           descripcion=trabajo))
+                           descripcion=trabajo, rangos=rangos))
 
     if sesion.vuelta_calma:
         pasos.append(_paso(siguiente(), "vuelta_calma", segundos=sesion.vuelta_calma.total_seconds(),
@@ -150,7 +164,7 @@ def sesion_a_entrenamiento(sesion: SesionPlanificada, origen: str = "PB_coach") 
 
     return {
         "workoutName": nombre_entrenamiento(sesion),
-        "description": notas(sesion, origen),
+        "description": notas(sesion, origen, rangos),
         "sportType": _DEPORTE,
         "workoutSegments": [{"segmentOrder": 1, "sportType": _DEPORTE, "workoutSteps": pasos}],
     }

@@ -569,3 +569,18 @@ perfil pide más de lo que cabe, el agente adapta y lo explica.
 **Por qué**: la metodología (Uphill Athlete) pide 5 o más sesiones y salidas
 largas que pueden no caber en la semana real del atleta. Sin una restricción
 dura en código, el plan sería bonito pero imposible de cumplir.
+
+## 2026-10-17 — Zonas de FC por umbrales, calculadas en código
+
+**Decisión**: el perfil define las zonas relativas a los umbrales del atleta
+(`zonas_fc`: p. ej. Z1 de AeT − 20 % a AeT − 10 %). El servicio calcula las
+pulsaciones con la ficha (`core/athlete.rangos_fc`) y las guarda en
+`Plan.rangos_fc` al aceptar el plan, descartando lo que haya puesto el LLM.
+La publicación envía cada paso al reloj como rango a medida
+(`targetValueOne/Two`) y añade "FC 119-134" a las notas. Si falta un umbral
+(sin LT no hay Z3 ni Z4), esa zona va con la zona genérica de Garmin.
+
+**Por qué**: Uphill Athlete basa todo en el umbral aeróbico propio y las
+zonas de Garmin (por FC máxima) no lo reflejan: con ellas casi todos los
+rodajes del atleta caían en Z3. Las cifras salen del perfil y de la ficha,
+nunca del modelo.

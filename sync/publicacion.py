@@ -92,7 +92,7 @@ async def publicar_semana(
 
     origen = f"PB_coach p{plan_id} v{plan.version}"
     for sesion in sesiones:
-        workout_id = await cliente.subir_entrenamiento(sesion_a_entrenamiento(sesion, origen))
+        workout_id = await cliente.subir_entrenamiento(sesion_a_entrenamiento(sesion, origen, plan.rangos_fc))
         await cliente.programar(workout_id, sesion.fecha)
         nombre = nombre_entrenamiento(sesion)
         with sesiones_db.begin() as db:

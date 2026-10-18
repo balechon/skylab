@@ -125,3 +125,41 @@ def test_una_descripcion_larga_se_rechaza():
             duracion_objetivo=timedelta(minutes=40),
             descripcion="Mantén la frecuencia cardíaca en la zona de entrenamiento 2 " * 4,
         )
+
+
+# ---------- pulsaciones propias del atleta ----------
+
+def test_con_rangos_la_zona_va_en_pulsaciones_y_en_las_notas():
+    from core.training import RangoFC
+
+    rangos = {ZonasFC.Z1: RangoFC(minimo=119, maximo=134), ZonasFC.Z2: RangoFC(minimo=134, maximo=149)}
+    sesion = SesionPlanificada(
+        fecha=date(2026, 10, 21),
+        clase_sesion=ClaseSesion.FONDO,
+        tipo_sesion=TipoSesion.BASE,
+        duracion_objetivo=timedelta(minutes=60),
+        zona_fc_objetivo=ZonasFC.Z2,
+        calentamiento=timedelta(minutes=10),
+    )
+    entrenamiento = sesion_a_entrenamiento(sesion, "PB_coach p1 v1", rangos)
+    principal = entrenamiento["workoutSegments"][0]["workoutSteps"][1]
+    assert principal["targetType"]["workoutTargetTypeKey"] == "heart.rate.zone"
+    assert (principal["targetValueOne"], principal["targetValueTwo"]) == (134.0, 149.0)
+    assert "zoneNumber" not in principal
+    assert "FC 134-149" in entrenamiento["description"].splitlines()[0]
+
+
+def test_sin_rango_para_la_zona_se_usa_la_zona_del_reloj():
+    from core.training import RangoFC
+
+    sesion = SesionPlanificada(
+        fecha=date(2026, 10, 21),
+        clase_sesion=ClaseSesion.ESPECIFICO,
+        tipo_sesion=TipoSesion.TEMPO,
+        duracion_objetivo=timedelta(minutes=40),
+        zona_fc_objetivo=ZonasFC.Z3,
+    )
+    entrenamiento = sesion_a_entrenamiento(sesion, "PB_coach", {ZonasFC.Z1: RangoFC(minimo=119, maximo=134)})
+    paso = entrenamiento["workoutSegments"][0]["workoutSteps"][0]
+    assert paso["zoneNumber"] == 3 and "targetValueOne" not in paso
+    assert "FC" not in entrenamiento["description"]

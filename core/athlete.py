@@ -12,7 +12,8 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from core.training import ClaseSesion, Plan
+from core.methodology import AnclaZona, DefinicionZonas, LimiteZona
+from core.training import ClaseSesion, Plan, RangoFC, ZonasFC
 
 
 class DiaSemana(str, Enum):
@@ -141,3 +142,30 @@ def revisar_disponibilidad(plan: Plan, disponibilidad: Disponibilidad, desde: da
                 f"{disponibilidad.dias_largos_por_semana} por semana."
             )
     return problemas
+
+
+def _valor_ancla(umbrales: Umbrales, ancla: AnclaZona) -> Optional[int]:
+    return {
+        AnclaZona.UMBRAL_AEROBICO: umbrales.fc_aerobico,
+        AnclaZona.UMBRAL_LACTATO: umbrales.fc_lactato,
+        AnclaZona.FC_MAXIMA: umbrales.fc_maxima,
+    }[ancla]
+
+
+def _pulsaciones(limite: LimiteZona, umbrales: Umbrales) -> Optional[int]:
+    base = _valor_ancla(umbrales, limite.ancla)
+    return None if base is None else round(base * (1 + limite.pct / 100))
+
+
+def rangos_fc(definicion: Optional[DefinicionZonas], umbrales: Umbrales) -> dict[ZonasFC, RangoFC]:
+    """Pulsaciones de cada zona para este atleta. Solo las zonas cuyos dos
+    límites se pueden calcular con los umbrales conocidos (sin el umbral de
+    lactato no hay Z3 ni Z4)."""
+    if definicion is None:
+        return {}
+    rangos = {}
+    for zona, limites in definicion.zonas.items():
+        minimo, maximo = _pulsaciones(limites.desde, umbrales), _pulsaciones(limites.hasta, umbrales)
+        if minimo is not None and maximo is not None and minimo < maximo:
+            rangos[zona] = RangoFC(minimo=minimo, maximo=maximo)
+    return rangos

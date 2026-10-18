@@ -353,6 +353,20 @@ secuencias_bloques:
       - "Puesta a punto"
 
 # =====================================================================
+# zonas_fc — límites de cada zona relativos a los umbrales del atleta
+# (fig. 3.3). El sistema calcula las pulsaciones con la ficha del atleta y
+# las envía al reloj. Z5 no se define: la FC no sirve para medirla.
+# =====================================================================
+zonas_fc:
+  id: "UA-ZONAS-001"
+  descripcion: "Cinco zonas ancladas en el umbral aeróbico (techo de Z2) y en el de lactato (techo de Z3): Z1 de AeT − 20 % a AeT − 10 %, Z2 de AeT − 10 % a AeT, Z3 de AeT a LT y Z4 de LT a la FC máxima. Por debajo de AeT − 20 %, recuperación (cap. 3, A Discussion of Intensity Zones; fig. 3.3)."
+  zonas:
+    Z1: { desde: { ancla: "AeT", pct: -20 }, hasta: { ancla: "AeT", pct: -10 } }
+    Z2: { desde: { ancla: "AeT", pct: -10 }, hasta: { ancla: "AeT" } }
+    Z3: { desde: { ancla: "AeT" }, hasta: { ancla: "LT" } }
+    Z4: { desde: { ancla: "LT" }, hasta: { ancla: "FCmax" } }
+
+# =====================================================================
 # SECCIONES NUEVAS — el modelo todavía no las acepta.
 # =====================================================================
 

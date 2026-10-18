@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo, TipoSesion
+from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo, TipoSesion, ZonasFC
 
 
 class CategoriaRegla(str, Enum):
@@ -161,6 +161,35 @@ class SecuenciaBloques(BaseModel):
     objetivos: list[ObjetivoMesociclo] = Field(min_length=1)
 
 
+class AnclaZona(str, Enum):
+    UMBRAL_AEROBICO = "AeT"
+    UMBRAL_LACTATO = "LT"
+    FC_MAXIMA = "FCmax"
+
+
+class LimiteZona(BaseModel):
+    """Un límite de zona relativo a un umbral del atleta: `pct` por encima
+    (positivo) o por debajo (negativo) del ancla. Ej.: AeT − 10 %."""
+
+    ancla: AnclaZona
+    pct: float = Field(default=0, ge=-50, le=50)
+
+
+class LimitesZona(BaseModel):
+    desde: LimiteZona
+    hasta: LimiteZona
+
+
+class DefinicionZonas(BaseModel):
+    """Cómo define la metodología las zonas de FC a partir de los umbrales
+    del atleta. Las zonas que no se pueden expresar así (p. ej. un esfuerzo
+    máximo de segundos, donde la FC no sirve) se omiten."""
+
+    id: str
+    descripcion: str
+    zonas: dict[ZonasFC, LimitesZona] = Field(min_length=1)
+
+
 class PerfilMetodologia(BaseModel):
     """Un perfil de metodología completo — la traducción íntegra de un YAML
     de autor a objetos tipados. Solo un perfil está activo por Plan.
@@ -177,6 +206,7 @@ class PerfilMetodologia(BaseModel):
     reglas_conteo_microciclo: list[ReglaConteoMicrociclo] = Field(default_factory=list)
     reglas_ajuste: list[ReglaAjuste] = Field(default_factory=list)
     secuencias_bloques: list[SecuenciaBloques] = Field(default_factory=list)
+    zonas_fc: Optional[DefinicionZonas] = None
 
     def todos_los_ids(self) -> list[str]:
         """IDs de todas las reglas del perfil, de todos los tipos."""
@@ -191,7 +221,7 @@ class PerfilMetodologia(BaseModel):
                 self.secuencias_bloques,
             )
             for r in lista
-        ]
+        ] + ([self.zonas_fc.id] if self.zonas_fc else [])
 
     def secuencia_para(self, modo: ModoPlan) -> Optional[SecuenciaBloques]:
         return next((s for s in self.secuencias_bloques if s.modo == modo), None)

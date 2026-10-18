@@ -163,3 +163,31 @@ def test_la_ejecucion_guarda_la_ficha_con_la_que_se_planifico(sesiones_db):
     with sesiones_db() as db:
         registro = db.scalars(select(EjecucionAgenteFila)).one().resultado
     assert registro["ficha_atleta"]["categoria"] == "1"
+
+
+
+def test_el_plan_guardado_lleva_las_pulsaciones_del_atleta(sesiones_db, monkeypatch, tmp_path):
+    from core.athlete import FichaAtleta, Umbrales
+    from core.training import ZonasFC
+
+    # Perfil de ejemplo con definición de zonas.
+    perfil = (servicio.perfiles_dir() / "ejemplo_didactico.yaml").read_text(encoding="utf-8")
+    zonas = """
+zonas_fc:
+  id: "EJEMPLO-ZONAS-001"
+  descripcion: "Zonas por umbral aeróbico."
+  zonas:
+    Z1: { desde: { ancla: "AeT", pct: -20 }, hasta: { ancla: "AeT", pct: -10 } }
+    Z2: { desde: { ancla: "AeT", pct: -10 }, hasta: { ancla: "AeT" } }
+"""
+    (tmp_path / "ejemplo_didactico.yaml").write_text(perfil + zonas, encoding="utf-8")
+    monkeypatch.setenv("PB_COACH_PERFILES_DIR", str(tmp_path))
+    with sesiones_db.begin() as db:
+        repo.guardar_ficha(db, FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149)))
+
+    respuesta = servicio.crear_ciclo(sesiones_db, _entrega(resultado_valido()), contexto_ciclo().solicitud, hoy=HOY)
+
+    with sesiones_db() as db:
+        _, plan = repo.plan_vigente(db)
+    assert respuesta.version == 1
+    assert (plan.rangos_fc[ZonasFC.Z2].minimo, plan.rangos_fc[ZonasFC.Z2].maximo) == (134, 149)

@@ -14,6 +14,7 @@ from pydantic import BaseModel, ValidationError
 
 from agent.esquemas import ContextoAgente, Operacion, ResultadoAgente
 from agent.guardia import revisar_resultado
+from core.athlete import rangos_fc
 from core.training import Plan
 from core.calculator import inicio_de_semana, resumir_semanas
 from core.validator import validar_plan
@@ -45,9 +46,10 @@ DEFINICIONES: list[dict[str, Any]] = [
     ),
     _definicion(
         "obtener_atleta",
-        "Devuelve la ficha del atleta: edad, categoría, umbrales de FC y disponibilidad por día (máximo de "
-        "horas, días libres y días largos). La disponibilidad es una restricción dura: la revisión final "
-        "rechaza el plan que no la cumpla.",
+        "Devuelve la ficha del atleta: edad, categoría, umbrales de FC, disponibilidad por día (máximo de "
+        "horas, días libres y días largos) y las pulsaciones de cada zona calculadas con la definición de "
+        "zonas del perfil. La disponibilidad es una restricción dura: la revisión final rechaza el plan que "
+        "no la cumpla.",
         {},
     ),
     _definicion(
@@ -123,7 +125,12 @@ class Herramientas:
     def _tool_obtener_atleta(self) -> SalidaTool:
         if self.ctx.atleta is None:
             return SalidaTool(contenido="No hay ficha del atleta: no hay restricciones de disponibilidad ni umbrales propios.")
-        return SalidaTool(contenido=_json(self.ctx.atleta))
+        ficha = self.ctx.atleta.model_dump(mode="json", exclude_none=True)
+        rangos = rangos_fc(self.ctx.perfil.zonas_fc, self.ctx.atleta.umbrales)
+        ficha["pulsaciones_por_zona"] = {z.value: f"{r.minimo}-{r.maximo}" for z, r in rangos.items()} or (
+            "Sin calcular: el perfil no define zonas o faltan umbrales; se usan las zonas del reloj."
+        )
+        return SalidaTool(contenido=_json(ficha))
 
     def _tool_resumen_historial(self, semanas: int) -> SalidaTool:
         if not 1 <= semanas <= SEMANAS_HISTORIAL_MAX:

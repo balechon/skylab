@@ -16,7 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 from agent.esquemas import ComentariosAtleta, ContextoAgente, EstadoResultado, Operacion, SolicitudCiclo
 from agent.grafo import EjecucionAgente, ejecutar_agente
-from core.athlete import FichaAtleta
+from core.athlete import FichaAtleta, rangos_fc
 from core.training import Microciclo, Plan
 from core.deviation import EvaluacionSemana, evaluar_semana
 from core.loader import cargar_perfil
@@ -68,6 +68,13 @@ def _ultimo_microciclo_cerrado(plan: Plan, hoy: date) -> Optional[Microciclo]:
     return cerrados[-1] if cerrados else None
 
 
+def _con_pulsaciones(plan: Plan, ctx: ContextoAgente) -> Plan:
+    """El plan con las pulsaciones de cada zona para este atleta, calculadas
+    en código. Lo que el LLM haya puesto en rangos_fc se descarta."""
+    rangos = rangos_fc(ctx.perfil.zonas_fc, ctx.atleta.umbrales) if ctx.atleta else {}
+    return plan.model_copy(update={"rangos_fc": rangos})
+
+
 def _ficha(sesiones_db: sessionmaker) -> Optional[FichaAtleta]:
     with sesiones_db() as db:
         return repo.ficha_vigente(db)
@@ -109,7 +116,7 @@ def crear_ciclo(
         version_id = None
         resultado = ejecucion.resultado
         if resultado is not None and resultado.estado == EstadoResultado.PLAN_VALIDO:
-            respuesta.plan_id = repo.crear_plan(db, resultado.plan, perfil=solicitud.perfil)
+            respuesta.plan_id = repo.crear_plan(db, _con_pulsaciones(resultado.plan, ctx), perfil=solicitud.perfil)
             respuesta.version = 1
             version_id = repo.id_version(db, respuesta.plan_id, 1)
         repo.registrar_ejecucion(
@@ -178,7 +185,7 @@ def ajuste_semanal(
         if resultado is not None and resultado.estado == EstadoResultado.PLAN_VALIDO:
             accion = evaluacion.accion if evaluacion else None
             motivo = f"{accion.regla_id}: {accion.accion.value}" if accion else "ajuste_semanal: sin acción, se sigue el plan"
-            version_id = repo.guardar_version(db, plan_id, resultado.plan, motivo=motivo)
+            version_id = repo.guardar_version(db, plan_id, _con_pulsaciones(resultado.plan, ctx), motivo=motivo)
             respuesta.version = resultado.plan.version
         repo.registrar_ejecucion(
             db,

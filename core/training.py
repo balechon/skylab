@@ -375,6 +375,19 @@ class Carrera(BaseModel):
     desnivel_positivo_m: Optional[float] = Field(default=None, ge=0)
 
 
+class RangoFC(BaseModel):
+    """Rango de FC en pulsaciones por minuto."""
+
+    minimo: int = Field(ge=30, le=250)
+    maximo: int = Field(ge=30, le=250)
+
+    @model_validator(mode="after")
+    def validar_orden(self) -> "RangoFC":
+        if self.minimo >= self.maximo:
+            raise ValueError("El mínimo del rango de FC debe ser menor que el máximo")
+        return self
+
+
 class Plan(BaseModel):
     """El plan completo. Cada ajuste semanal produce una versión nueva.
 
@@ -388,6 +401,11 @@ class Plan(BaseModel):
     carrera: Optional[Carrera] = None
     version: int = Field(default=1, ge=1)
     mesociclos: list[Mesociclo] = Field(min_length=1)
+    # Pulsaciones de cada zona para este atleta, calculadas en código con la
+    # definición de zonas del perfil y los umbrales de la ficha (nunca por el
+    # LLM). Vacío si el perfil no define zonas o faltan umbrales: entonces el
+    # reloj usa sus propias zonas.
+    rangos_fc: dict[ZonasFC, RangoFC] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def validar_coherencia(self) -> "Plan":

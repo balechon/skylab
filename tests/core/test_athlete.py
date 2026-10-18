@@ -140,3 +140,37 @@ def test_ficha_desde_json():
     )
     assert ficha.disponibilidad.duracion_max_dia == timedelta(minutes=90)
     assert ficha.disponibilidad.dias_largos == [DiaSemana.SABADO, DiaSemana.DOMINGO]
+
+
+# ---------- pulsaciones por zona ----------
+
+from core.methodology import DefinicionZonas  # noqa: E402
+from core.athlete import rangos_fc  # noqa: E402
+
+ZONAS_UA = DefinicionZonas.model_validate(
+    {
+        "id": "UA-ZONAS-001",
+        "descripcion": "Zonas por umbrales.",
+        "zonas": {
+            "Z1": {"desde": {"ancla": "AeT", "pct": -20}, "hasta": {"ancla": "AeT", "pct": -10}},
+            "Z2": {"desde": {"ancla": "AeT", "pct": -10}, "hasta": {"ancla": "AeT"}},
+            "Z3": {"desde": {"ancla": "AeT"}, "hasta": {"ancla": "LT"}},
+            "Z4": {"desde": {"ancla": "LT"}, "hasta": {"ancla": "FCmax"}},
+        },
+    }
+)
+
+
+def test_con_solo_el_aet_salen_z1_y_z2():
+    rangos = rangos_fc(ZONAS_UA, Umbrales(fc_aerobico=149))
+    assert {z.value: (r.minimo, r.maximo) for z, r in rangos.items()} == {"Z1": (119, 134), "Z2": (134, 149)}
+
+
+def test_con_todos_los_umbrales_salen_hasta_z4():
+    rangos = rangos_fc(ZONAS_UA, Umbrales(fc_aerobico=149, fc_lactato=170, fc_maxima=192))
+    assert (rangos[ZonasFC.Z3].minimo, rangos[ZonasFC.Z3].maximo) == (149, 170)
+    assert (rangos[ZonasFC.Z4].minimo, rangos[ZonasFC.Z4].maximo) == (170, 192)
+
+
+def test_sin_definicion_de_zonas_no_hay_rangos():
+    assert rangos_fc(None, Umbrales(fc_aerobico=149)) == {}
