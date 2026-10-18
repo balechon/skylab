@@ -77,6 +77,15 @@ def _segundos_por_zona(zonas: list[dict[str, Any]]) -> dict[ZonasFC, float]:
     return resultado
 
 
+def _limites_zonas(zonas: list[dict[str, Any]]) -> list[int]:
+    """Suelo de cada zona (Z1..Z5) con el que el reloj calculó el tiempo
+    por zona; vacío si Garmin no lo da completo."""
+    suelos = {z.get("zoneNumber"): z.get("zoneLowBoundary") for z in zonas}
+    if any(suelos.get(n) is None for n in range(1, 6)):
+        return []
+    return [int(suelos[n]) for n in range(1, 6)]
+
+
 def actividad_a_sesion(
     resumen: dict[str, Any],
     detalle: dict[str, Any],
@@ -107,6 +116,7 @@ def actividad_a_sesion(
         desnivel_negativo_m=resumen.get("elevation_loss_meters"),
         fc_media=round(resumen["avg_hr_bpm"]) if resumen.get("avg_hr_bpm") else None,
         segundos_por_zona=_segundos_por_zona(zonas),
+        limites_zonas=_limites_zonas(zonas),
         ritmo_medio_min_km=round(segundos / 60 / distancia_km, 2) if distancia_km > 0 else None,
         rpe=_rpe(detalle.get("workout_rpe")) if rpe_valido else None,
         sensaciones=_sensaciones(detalle.get("workout_feel")) if rpe_valido else None,

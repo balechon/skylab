@@ -23,6 +23,8 @@ from core.training import (
     Microciclo,
     SesionPlanificada,
     SesionRealizada,
+    RangoFC,
+    ZonasFC,
 )
 from core.calculator import ResumenPeriodo, resumir_periodo
 from core.validator import ReglaNoEvaluable
@@ -203,6 +205,7 @@ def evaluar_semana(
     realizadas: list[SesionRealizada],
     perfil: PerfilMetodologia,
     metricas_externas: Optional[dict[MetricaAjuste, float]] = None,
+    rangos: Optional[dict[ZonasFC, RangoFC]] = None,
 ) -> EvaluacionSemana:
     """Cierra una semana: clasifica, mide y decide la acción de ajuste.
 
@@ -215,7 +218,7 @@ def evaluar_semana(
         s for s in realizadas if microciclo.fecha_inicio <= s.fecha <= microciclo.fecha_fin
     ]
     clasificadas = clasificar_sesiones(de_la_semana, microciclo.sesiones)
-    resumen = resumir_periodo(clasificadas, microciclo.fecha_inicio, microciclo.fecha_fin)
+    resumen = resumir_periodo(clasificadas, microciclo.fecha_inicio, microciclo.fecha_fin, rangos)
 
     metricas = calcular_metricas(microciclo, clasificadas, resumen)
     metricas.update(metricas_externas or {})

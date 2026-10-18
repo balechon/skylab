@@ -186,3 +186,52 @@ def test_comparar_carga_sin_fuente_completa_devuelve_none():
     anterior = _semana(SEMANA_PREVIA, [_sesion(date(2026, 10, 6), 60, 10, epoc=100)])
     actual = _semana(LUNES, [_sesion(date(2026, 10, 13), 60, 10, rpe=6)])
     assert comparar_carga(anterior, actual) is None
+
+
+
+# ---------- zonas comparables ----------
+
+from core.calculator import zona_de_fc, zonas_coinciden  # noqa: E402
+from core.training import RangoFC  # noqa: E402
+
+RANGOS = {
+    ZonasFC.REC: RangoFC(maximo=131),
+    ZonasFC.Z1: RangoFC(minimo=131, maximo=148),
+    ZonasFC.Z2: RangoFC(minimo=148, maximo=164),
+    ZonasFC.Z3: RangoFC(minimo=164, maximo=179),
+    ZonasFC.Z4: RangoFC(minimo=179, maximo=199),
+}
+
+
+def _sesion_zonas(dia: int, limites: list[int], fc: int) -> SesionRealizada:
+    return SesionRealizada(
+        fecha=date(2026, 10, 12) + timedelta(days=dia),
+        duracion=timedelta(minutes=50),
+        distancia_km=8,
+        fc_media=fc,
+        segundos_por_zona={ZonasFC.Z4: 1800.0, ZonasFC.Z3: 1200.0},
+        limites_zonas=limites,
+    )
+
+
+def test_zonas_coinciden_solo_con_los_mismos_suelos():
+    assert zonas_coinciden([131, 148, 164, 179, 190], RANGOS)
+    assert not zonas_coinciden([100, 119, 139, 159, 179], RANGOS)  # zonas por FC máx. de Garmin
+    assert not zonas_coinciden([], RANGOS)  # sin datos no se puede afirmar
+
+
+def test_zona_de_fc():
+    assert zona_de_fc(161, RANGOS) == ZonasFC.Z2
+    assert zona_de_fc(125, RANGOS) == ZonasFC.REC
+    assert zona_de_fc(185, RANGOS) == ZonasFC.Z4
+
+
+def test_el_tiempo_por_zona_no_mezcla_zonas_distintas():
+    antigua = _sesion_zonas(1, [100, 119, 139, 159, 179], fc=161)  # "Z4" de Garmin, Z2 del atleta
+    nueva = _sesion_zonas(3, [131, 148, 164, 179, 190], fc=150)
+    resumen = resumir_periodo([antigua, nueva], date(2026, 10, 12), date(2026, 10, 18), RANGOS)
+    assert resumen.duracion_por_zona == {ZonasFC.Z4: timedelta(minutes=30), ZonasFC.Z3: timedelta(minutes=20)}
+    assert resumen.sesiones_zonas_no_comparables == 1
+    assert resumen.zona_por_fc_media == {ZonasFC.Z2: 1}
+    # Sin rangos (sin ficha), como antes: todo suma.
+    assert resumir_periodo([antigua, nueva], date(2026, 10, 12), date(2026, 10, 18)).duracion_por_zona[ZonasFC.Z4] == timedelta(hours=1)

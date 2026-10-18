@@ -55,7 +55,9 @@ DEFINICIONES: list[dict[str, Any]] = [
     _definicion(
         "resumen_historial",
         "Volumen realmente entrenado en las últimas N semanas cerradas (lunes a domingo; no incluye la semana en curso): sesiones, km, "
-        "duración, desnivel, tiempo por zona de FC y carga (EPOC y sRPE). Ya agregado: nunca sesiones sueltas.",
+        "duración, desnivel, tiempo por zona de FC y carga (EPOC y sRPE). Ya agregado: nunca sesiones sueltas. "
+        "El tiempo por zona solo cuenta sesiones registradas con las zonas actuales del atleta; las registradas con "
+        "otras zonas (sesiones_zonas_no_comparables) se clasifican aproximadamente por su FC media (zona_por_fc_media).",
         {"semanas": {"type": "integer", "description": f"Cuántas semanas hacia atrás, de 1 a {SEMANAS_HISTORIAL_MAX}."}},
     ),
     _definicion(
@@ -139,7 +141,8 @@ class Herramientas:
         # una caída de volumen que no existe.
         lunes_actual = inicio_de_semana(self.ctx.hoy)
         desde = lunes_actual - timedelta(weeks=semanas)
-        resumenes = resumir_semanas(self.ctx.sesiones, desde, lunes_actual - timedelta(days=1))
+        rangos = rangos_fc(self.ctx.perfil.zonas_fc, self.ctx.atleta.umbrales) if self.ctx.atleta else None
+        resumenes = resumir_semanas(self.ctx.sesiones, desde, lunes_actual - timedelta(days=1), rangos)
         return SalidaTool(contenido=_json([r.model_dump(mode="json") for r in resumenes]))
 
     def _tool_obtener_plan(self) -> SalidaTool:

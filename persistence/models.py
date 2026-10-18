@@ -83,6 +83,7 @@ class SesionRealizadaFila(Base):
     desnivel_negativo_m: Mapped[Optional[float]] = mapped_column(Float)
     fc_media: Mapped[Optional[int]] = mapped_column(Integer)
     segundos_por_zona: Mapped[dict[str, float]] = mapped_column(JSONB, default=dict)
+    limites_zonas: Mapped[list[int]] = mapped_column(JSONB, default=list)
     ritmo_medio_min_km: Mapped[Optional[float]] = mapped_column(Float)
     rpe: Mapped[Optional[int]] = mapped_column(Integer)
     sensaciones: Mapped[Optional[str]] = mapped_column(Text)

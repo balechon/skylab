@@ -17,9 +17,9 @@ from datetime import date, timedelta
 from enum import Enum
 from typing import Iterable, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
-from core.training import ClaseSesion, SesionRealizada, ZonasFC
+from core.training import ClaseSesion, RangoFC, SesionRealizada, ZonasFC
 
 
 class ResumenPeriodo(BaseModel):
@@ -35,6 +35,10 @@ class ResumenPeriodo(BaseModel):
     sesiones_por_clase: dict[ClaseSesion, int]
     duracion_por_zona: dict[ZonasFC, timedelta]
     sesiones_sin_clasificar: int
+    # Sesiones registradas con zonas distintas de las del atleta: no suman a
+    # duracion_por_zona; se clasifican, aproximadamente, por su FC media.
+    sesiones_zonas_no_comparables: int = 0
+    zona_por_fc_media: dict[ZonasFC, int] = Field(default_factory=dict)
 
     carga_epoc: float
     sesiones_con_epoc: int
@@ -68,13 +72,51 @@ def inicio_de_semana(fecha: date) -> date:
     return fecha - timedelta(days=fecha.weekday())
 
 
+_ZONAS_CON_SUELO = (ZonasFC.Z1, ZonasFC.Z2, ZonasFC.Z3, ZonasFC.Z4)
+
+
+def zonas_coinciden(limites: list[int], rangos: dict[ZonasFC, RangoFC]) -> bool:
+    """Si los suelos de zona con los que se registró una sesión son los de
+    las zonas del atleta (Z1..Z4; Z5 no se define por FC). Sin límites
+    conocidos, no se puede afirmar que coincidan."""
+    if not limites:
+        return False
+    for posicion, zona in enumerate(_ZONAS_CON_SUELO):
+        rango = rangos.get(zona)
+        if rango is None or rango.minimo is None:
+            continue
+        if posicion >= len(limites) or limites[posicion] != rango.minimo:
+            return False
+    return True
+
+
+def zona_de_fc(fc: int, rangos: dict[ZonasFC, RangoFC]) -> Optional[ZonasFC]:
+    """La zona del atleta en la que cae una FC (la más alta cuyo suelo no
+    supera la FC; por debajo de todos los suelos, Rec si existe)."""
+    zona = None
+    for candidata in _ZONAS_CON_SUELO:
+        rango = rangos.get(candidata)
+        if rango is not None and rango.minimo is not None and fc >= rango.minimo:
+            zona = candidata
+    if zona is None and ZonasFC.REC in rangos:
+        return ZonasFC.REC
+    return zona
+
+
 def resumir_periodo(
-    sesiones: Iterable[SesionRealizada], fecha_inicio: date, fecha_fin: date
+    sesiones: Iterable[SesionRealizada],
+    fecha_inicio: date,
+    fecha_fin: date,
+    rangos: Optional[dict[ZonasFC, RangoFC]] = None,
 ) -> ResumenPeriodo:
     """Agrega las sesiones que caen dentro de [fecha_inicio, fecha_fin].
 
     Las sesiones fuera del rango se ignoran. Un periodo sin sesiones devuelve
     un resumen con todo a cero, no None: una semana sin entrenar es un dato.
+
+    Con `rangos` (las zonas del atleta), el tiempo por zona solo suma las
+    sesiones registradas con esas mismas zonas; las demás se cuentan aparte y
+    se clasifican por su FC media.
     """
     if fecha_fin < fecha_inicio:
         raise ValueError("fecha_fin debe ser posterior (o igual) a fecha_inicio")
@@ -82,7 +124,15 @@ def resumir_periodo(
     dentro = [s for s in sesiones if fecha_inicio <= s.fecha <= fecha_fin]
 
     duracion_por_zona: dict[ZonasFC, timedelta] = {}
+    no_comparables = 0
+    zona_por_fc_media: Counter = Counter()
     for s in dentro:
+        if rangos and not zonas_coinciden(s.limites_zonas, rangos):
+            no_comparables += 1
+            zona = zona_de_fc(s.fc_media, rangos) if s.fc_media else None
+            if zona is not None:
+                zona_por_fc_media[zona] += 1
+            continue
         for zona, segundos in s.segundos_por_zona.items():
             duracion_por_zona[zona] = duracion_por_zona.get(zona, timedelta(0)) + timedelta(seconds=segundos)
 
@@ -95,6 +145,8 @@ def resumir_periodo(
         desnivel_positivo_m=sum(s.desnivel_positivo_m or 0 for s in dentro),
         sesiones_por_clase=dict(Counter(s.clase_sesion for s in dentro if s.clase_sesion is not None)),
         duracion_por_zona=duracion_por_zona,
+        sesiones_zonas_no_comparables=no_comparables,
+        zona_por_fc_media=dict(zona_por_fc_media),
         sesiones_sin_clasificar=sum(1 for s in dentro if s.clase_sesion is None),
         carga_epoc=round(sum(s.carga_epoc for s in dentro if s.carga_epoc is not None), 1),
         sesiones_con_epoc=sum(1 for s in dentro if s.carga_epoc is not None),
@@ -104,7 +156,10 @@ def resumir_periodo(
 
 
 def resumir_semanas(
-    sesiones: Iterable[SesionRealizada], desde: date, hasta: date
+    sesiones: Iterable[SesionRealizada],
+    desde: date,
+    hasta: date,
+    rangos: Optional[dict[ZonasFC, RangoFC]] = None,
 ) -> list[ResumenPeriodo]:
     """Un resumen por semana (lunes a domingo) que toque [desde, hasta], en
     orden cronológico, incluidas las semanas sin ninguna sesión."""
@@ -115,7 +170,7 @@ def resumir_semanas(
     resumenes = []
     lunes = inicio_de_semana(desde)
     while lunes <= hasta:
-        resumenes.append(resumir_periodo(sesiones, lunes, lunes + timedelta(days=6)))
+        resumenes.append(resumir_periodo(sesiones, lunes, lunes + timedelta(days=6), rangos))
         lunes += timedelta(days=7)
     return resumenes
 

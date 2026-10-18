@@ -152,3 +152,21 @@ def test_sin_entrenamientos_programados_es_una_lista_vacia():
     assert _interpretar("get_scheduled_workouts", "No workouts scheduled between 2026-10-19 and 2026-10-25.") == {
         "scheduled_workouts": []
     }
+
+
+
+# ---------- límites de zona ----------
+
+ZONAS_CON_LIMITES = [
+    {"zoneNumber": n, "secsInZone": s, "zoneLowBoundary": b}
+    for n, s, b in [(1, 600.0, 131), (2, 1200.0, 148), (3, 300.0, 164), (4, 0, 179), (5, 0, 190)]
+]
+
+
+def test_guarda_los_limites_de_zona_con_los_que_se_registro():
+    s = actividad_a_sesion(resumen_garmin(), DETALLE, ZONAS_CON_LIMITES)
+    assert s.limites_zonas == [131, 148, 164, 179, 190]
+
+
+def test_sin_limites_completos_no_se_inventan():
+    assert actividad_a_sesion(resumen_garmin(), DETALLE, ZONAS).limites_zonas == []

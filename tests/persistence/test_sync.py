@@ -43,3 +43,25 @@ def test_primer_sync_trae_la_linea_base_y_el_segundo_no_duplica(sesiones_db):
     with sesiones_db() as db:
         guardadas = repo.sesiones_entre(db, date(2026, 1, 1), HOY)
     assert [s.garmin_activity_id for s in guardadas] == [2, 3, 4]
+
+
+
+def test_rellena_los_limites_de_zona_de_las_actividades_guardadas(sesiones_db):
+    from sync.sincronizacion import rellenar_limites_zonas
+    from tests.sync.test_garmin import ZONAS_CON_LIMITES
+
+    cliente = ClienteGarminFalso([resumen_garmin(7, inicio="2026-10-15 07:00:00")])
+    asyncio.run(sincronizar(sesiones_db, cliente, hoy=HOY))  # ZONAS sin límites
+    with sesiones_db() as db:
+        assert repo.sesiones_entre(db, date(2026, 10, 15), HOY)[0].limites_zonas == []
+
+    cliente.zonas_fc = lambda activity_id: _devolver(ZONAS_CON_LIMITES)
+    assert asyncio.run(rellenar_limites_zonas(sesiones_db, cliente, date(2026, 10, 1), HOY)) == 1
+    with sesiones_db() as db:
+        assert repo.sesiones_entre(db, date(2026, 10, 15), HOY)[0].limites_zonas == [131, 148, 164, 179, 190]
+    # Repetirlo no cambia nada.
+    assert asyncio.run(rellenar_limites_zonas(sesiones_db, cliente, date(2026, 10, 1), HOY)) == 0
+
+
+async def _devolver(valor):
+    return valor

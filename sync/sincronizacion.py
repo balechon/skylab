@@ -47,7 +47,16 @@ async def sincronizar(
 
     with sesiones_db.begin() as db:
         nuevas = repo.guardar_sesiones(db, sesiones)
+        repo.completar_limites_zonas(db, sesiones)
     return ResultadoSync(desde=desde, hasta=hoy, traidas=len(sesiones), nuevas=nuevas)
+
+
+async def rellenar_limites_zonas(sesiones_db: sessionmaker, cliente: ClienteGarmin, desde: date, hasta: date) -> int:
+    """Vuelve a leer de Garmin las actividades entre dos fechas y rellena los
+    límites de zona de las ya guardadas que no los tienen."""
+    sesiones = await traer_sesiones(cliente, desde, hasta)
+    with sesiones_db.begin() as db:
+        return repo.completar_limites_zonas(db, sesiones)
 
 
 async def sincronizar_ahora(sesiones_db: sessionmaker) -> ResultadoSync:

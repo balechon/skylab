@@ -615,3 +615,17 @@ Umbrales del atleta tras el test del 2026-10-18: AeT 164 (ventilatorio), LT
 deficiencia aeróbica. Zonas de running configuradas en Garmin Connect con
 los mismos límites que el perfil, para que el tiempo por zona sincronizado
 use las zonas del plan.
+
+## 2026-10-18 — El tiempo por zona no mezcla zonas distintas
+
+**Decisión**: cada sesión guarda los suelos de zona con los que Garmin calculó
+su tiempo por zona (`limites_zonas`, migración 0006). Con las zonas del atleta
+(perfil + ficha), el resumen del historial y la evaluación semanal solo suman
+el tiempo de las sesiones registradas con esas mismas zonas; las demás se
+cuentan como no comparables y se clasifican, aproximadamente, por su FC media.
+`python -m sync rellenar-zonas <desde>` completa las sesiones ya guardadas.
+
+**Por qué**: Garmin no recalcula las actividades pasadas al cambiar las
+zonas. En la primera creación del plan, el agente leyó el historial con las
+zonas antiguas (por FC máxima) y concluyó que el atleta entrenaba casi todo en
+Z3–Z4, cuando con su umbral aeróbico eran rodajes en Z2.

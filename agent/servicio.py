@@ -153,6 +153,8 @@ def ajuste_semanal(
     perfil = cargar_perfil(perfiles_dir() / f"{nombre_perfil}.yaml")
     _exigir_secuencia(perfil, nombre_perfil, plan.modo)
     sesiones = _sesiones_recientes(sesiones_db, hoy)
+    atleta = _ficha(sesiones_db)
+    rangos = rangos_fc(perfil.zonas_fc, atleta.umbrales) if atleta else None
     cerrado = _ultimo_microciclo_cerrado(plan, hoy)
     semana = cerrado.fecha_inicio if cerrado else None
     if semana is not None and not forzar:
@@ -163,7 +165,7 @@ def ajuste_semanal(
                 f"La semana del {semana} ya se ajustó (versión {version} del plan {plan_id}). "
                 "Usa forzar para rehacerlo."
             )
-    evaluacion = evaluar_semana(cerrado, sesiones, perfil) if cerrado else None
+    evaluacion = evaluar_semana(cerrado, sesiones, perfil, rangos=rangos) if cerrado else None
 
     ctx = ContextoAgente(
         operacion=Operacion.AJUSTE_SEMANAL,
@@ -174,7 +176,7 @@ def ajuste_semanal(
         plan_vigente=plan,
         evaluacion=evaluacion,
         comentarios=comentarios,
-        atleta=_ficha(sesiones_db),
+        atleta=atleta,
     )
     ejecucion = ejecutar_agente(ctx, modelo)
     respuesta = RespuestaServicio(ejecucion=ejecucion, plan_id=plan_id, evaluacion=evaluacion)

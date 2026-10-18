@@ -62,6 +62,25 @@ def guardar_sesiones(db: Session, sesiones: list[SesionRealizada]) -> int:
     return len(db.execute(sentencia).all())
 
 
+def completar_limites_zonas(db: Session, sesiones: list[SesionRealizada]) -> int:
+    """Rellena limites_zonas en las sesiones ya guardadas que no lo tienen
+    (guardadas antes de registrarlo). Devuelve cuántas se completaron."""
+    completadas = 0
+    for sesion in sesiones:
+        if sesion.garmin_activity_id is None or not sesion.limites_zonas:
+            continue
+        resultado = db.execute(
+            update(SesionRealizadaFila)
+            .where(
+                SesionRealizadaFila.garmin_activity_id == sesion.garmin_activity_id,
+                SesionRealizadaFila.limites_zonas == [],
+            )
+            .values(limites_zonas=sesion.limites_zonas)
+        )
+        completadas += resultado.rowcount
+    return completadas
+
+
 def sesiones_entre(db: Session, desde: date, hasta: date) -> list[SesionRealizada]:
     """Sesiones con fecha en [desde, hasta], en orden cronológico."""
     filas = db.scalars(

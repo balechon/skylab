@@ -250,6 +250,10 @@ class SesionRealizada(BaseModel):
     desnivel_negativo_m: Optional[float] = Field(default=None, ge=0)
     fc_media: Optional[int] = Field(default=None, gt=0)
     segundos_por_zona: dict[ZonasFC, float] = Field(default_factory=dict)
+    # Suelo de cada zona (Z1..Z5) con el que el reloj calculó segundos_por_zona.
+    # Si no coincide con las zonas actuales del atleta, esos tiempos no son
+    # comparables (p. ej. actividades registradas antes de configurar sus zonas).
+    limites_zonas: list[int] = Field(default_factory=list)
     ritmo_medio_min_km: Optional[float] = Field(default=None, gt=0)
     rpe: Optional[int] = Field(default=None, ge=1, le=10)
     sensaciones: Optional[str] = None
