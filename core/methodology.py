@@ -6,7 +6,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo, TipoSesion, ZonasFC
+from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo, TipoMicrociclo, TipoSesion, ZonasFC
 
 
 class CategoriaRegla(str, Enum):
@@ -16,6 +16,15 @@ class CategoriaRegla(str, Enum):
     PROGRESION = "Progresión"
     DESCANSO = "Descanso"
     INTENSIDAD = "Intensidad"
+
+
+class CondicionAtleta(str, Enum):
+    """Estado del atleta del que depende una regla. Deficiencia aeróbica:
+    el umbral de lactato supera al aeróbico en más de
+    PerfilMetodologia.deficiencia_aerobica_pct (Uphill Athlete: 10 %)."""
+
+    CON_DEFICIENCIA_AEROBICA = "con_deficiencia_aerobica"
+    SIN_DEFICIENCIA_AEROBICA = "sin_deficiencia_aerobica"
 
 
 class RegistroRegla(BaseModel):
@@ -33,6 +42,8 @@ class RegistroRegla(BaseModel):
     objetivo_mesociclo: Optional[ObjetivoMesociclo] = None
     clase_sesion: Optional[ClaseSesion] = None
     tipo_sesion: Optional[TipoSesion] = None
+    tipos_microciclo: list[TipoMicrociclo] = Field(default_factory=list)  # vacío: todas las semanas
+    solo_si: Optional[CondicionAtleta] = None  # None: aplica a cualquier atleta
 
     parametros: dict[str, float | int | str] = Field(default_factory=dict)
 
@@ -73,6 +84,7 @@ class ReglaConteoMicrociclo(BaseModel):
     clase_sesion: ClaseSesion
     minimo: Optional[int] = None
     maximo: Optional[int] = None
+    solo_si: Optional[CondicionAtleta] = None
 
     @model_validator(mode="after")
     def validar_algun_limite_presente(self) -> "ReglaConteoMicrociclo":
@@ -190,6 +202,15 @@ class DefinicionZonas(BaseModel):
     zonas: dict[ZonasFC, LimitesZona] = Field(min_length=1)
 
 
+class TiposSemana(BaseModel):
+    """Los tipos de semana que usa la metodología, con la receta de cada
+    uno. Si el perfil los define, el plan solo puede usar estos."""
+
+    id: str
+    descripcion: str
+    tipos: dict[TipoMicrociclo, str] = Field(min_length=1)
+
+
 class PerfilMetodologia(BaseModel):
     """Un perfil de metodología completo — la traducción íntegra de un YAML
     de autor a objetos tipados. Solo un perfil está activo por Plan.
@@ -207,6 +228,8 @@ class PerfilMetodologia(BaseModel):
     reglas_ajuste: list[ReglaAjuste] = Field(default_factory=list)
     secuencias_bloques: list[SecuenciaBloques] = Field(default_factory=list)
     zonas_fc: Optional[DefinicionZonas] = None
+    tipos_semana: Optional[TiposSemana] = None
+    deficiencia_aerobica_pct: Optional[float] = Field(default=None, gt=0)
 
     def todos_los_ids(self) -> list[str]:
         """IDs de todas las reglas del perfil, de todos los tipos."""
@@ -221,7 +244,7 @@ class PerfilMetodologia(BaseModel):
                 self.secuencias_bloques,
             )
             for r in lista
-        ] + ([self.zonas_fc.id] if self.zonas_fc else [])
+        ] + [d.id for d in (self.zonas_fc, self.tipos_semana) if d is not None]
 
     def secuencia_para(self, modo: ModoPlan) -> Optional[SecuenciaBloques]:
         return next((s for s in self.secuencias_bloques if s.modo == modo), None)

@@ -584,3 +584,19 @@ La publicación envía cada paso al reloj como rango a medida
 zonas de Garmin (por FC máxima) no lo reflejan: con ellas casi todos los
 rodajes del atleta caían en Z3. Las cifras salen del perfil y de la ficha,
 nunca del modelo.
+
+## 2026-10-17 — Tipos de semana y reglas según el atleta
+
+**Decisión**: `TipoMicrociclo` añade Base, Intensidad, Especificidad, Taper
+y Carrera (la R del libro es Descarga); `es_carga` decide qué semanas cuentan
+para la progresión. El perfil puede fijar sus `tipos_semana` (con la receta
+de cada uno) y el plan solo puede usar esos. Las reglas pueden limitarse a
+ciertos tipos de semana (`tipos_microciclo`) y a ciertos atletas (`solo_si`:
+con o sin deficiencia aeróbica, según el test del 10 % con los umbrales de la
+ficha). Si no se puede saber si una regla aplica, queda como no evaluable,
+nunca como cumplida. Evaluadores nuevos: reducción de la descarga, proporción
+mínima de la salida larga y máximo de tiempo en Z2.
+
+**Por qué**: Uphill Athlete organiza el macrociclo por tipos de semana y
+cambia sus reglas según el atleta (p. ej. una o dos sesiones intensas según
+la deficiencia aeróbica). Sin esto, esas reglas quedaban solo en el prompt.

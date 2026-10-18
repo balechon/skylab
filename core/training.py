@@ -269,8 +269,28 @@ class SesionRealizada(BaseModel):
 # ---------- Microciclo ----------
 
 class TipoMicrociclo(str, Enum):
+    """Tipo de semana. Carga y Descarga sirven para cualquier metodología;
+    el resto son los tipos de Uphill Athlete (B, I, R = Descarga, S, T, G).
+    Qué tipos usa un plan lo fija el perfil (tipos_semana)."""
+
     CARGA = "Carga"
     DESCARGA = "Descarga"
+    BASE = "Base"
+    INTENSIDAD = "Intensidad"
+    ESPECIFICIDAD = "Especificidad"
+    TAPER = "Taper"
+    CARRERA = "Carrera"
+
+    @property
+    def es_carga(self) -> bool:
+        """Semana que construye carga: cuenta para la progresión y para el
+        máximo de semanas seguidas sin descarga. Taper y Carrera no."""
+        return self in {
+            TipoMicrociclo.CARGA,
+            TipoMicrociclo.BASE,
+            TipoMicrociclo.INTENSIDAD,
+            TipoMicrociclo.ESPECIFICIDAD,
+        }
 
 
 class ObjetivosMicrociclo(BaseModel):

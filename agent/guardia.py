@@ -38,7 +38,7 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
         return problemas
 
     plan = resultado.plan
-    validacion = validar_plan(plan, ctx.perfil)
+    validacion = validar_plan(plan, ctx.perfil, ctx.atleta)
     for v in validacion.violaciones[:_MAX_VIOLACIONES_LISTADAS]:
         problemas.append(f"Violación de {v.regla_id}: {v.mensaje}")
     if len(validacion.violaciones) > _MAX_VIOLACIONES_LISTADAS:

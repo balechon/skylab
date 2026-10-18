@@ -350,3 +350,109 @@ def test_la_secuencia_de_otro_modo_no_se_evalua():
     competicion = BLOQUES.model_copy(update={"id": "X-BLOQUES-002", "modo": ModoPlan.COMPETICION})
     resultado = validar_plan(_plan((ObjetivoMesociclo.UMBRAL, [_micro(0)])), _perfil(secuencias_bloques=[competicion]))
     assert resultado.valido and "X-BLOQUES-002" not in resultado.reglas_evaluadas
+
+
+# ---------- tipos de semana, reglas por tipo y por atleta ----------
+
+from core.athlete import FichaAtleta, Umbrales, deficiencia_aerobica  # noqa: E402
+from core.methodology import CondicionAtleta, TiposSemana  # noqa: E402
+
+SEM_BASE, SEM_INTENSIDAD = TipoMicrociclo.BASE, TipoMicrociclo.INTENSIDAD
+
+
+def _regla(rid: str, parametros: dict, **campos) -> RegistroRegla:
+    return RegistroRegla(id=rid, categoria=CategoriaRegla.CARGA, descripcion="Prueba.", parametros=parametros, **campos)
+
+
+def _con_duracion(dia: int, minutos: int, clase=ClaseSesion.FONDO, zona=ZonasFC.Z1, semana: int = 0) -> SesionPlanificada:
+    return SesionPlanificada(
+        fecha=LUNES + timedelta(weeks=semana, days=dia),
+        clase_sesion=clase,
+        tipo_sesion=TipoSesion.BASE,
+        duracion_objetivo=timedelta(minutes=minutos),
+        zona_fc_objetivo=zona,
+    )
+
+
+def test_las_semanas_de_base_cuentan_como_carga():
+    perfil = _perfil(restricciones_globales=[RestriccionGlobal(id="G-1", descripcion="3:1", parametros={"microciclos_carga_max": 3})])
+    plan = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE), _micro(1, SEM_BASE), _micro(2, SEM_INTENSIDAD), _micro(3, SEM_BASE)]))
+    violaciones = validar_plan(plan, perfil).violaciones
+    assert [v.regla_id for v in violaciones] == ["G-1"]
+
+
+def test_la_descarga_baja_entre_el_40_y_el_60_por_ciento():
+    regla = _regla("R-DESCARGA", {"reduccion_descarga_min_pct": 40, "reduccion_descarga_max_pct": 60})
+    perfil = _perfil(reglas=[regla])
+    bien = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE, horas=5), _micro(1, DESCARGA, horas=2.5)]))
+    assert validar_plan(bien, perfil).violaciones == []
+    poco = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE, horas=5), _micro(1, DESCARGA, horas=4)]))
+    violaciones = validar_plan(poco, perfil).violaciones
+    assert len(violaciones) == 1 and "baja la duración un 20%" in violaciones[0].mensaje
+
+
+def test_la_larga_es_al_menos_el_30_por_ciento_en_semanas_de_base():
+    regla = _regla(
+        "R-LARGA", {"larga_min_pct_semana": 30, "larga_max_pct_semana": 40},
+        clase_sesion=ClaseSesion.FONDO, tipos_microciclo=[SEM_BASE, SEM_INTENSIDAD],
+    )
+    perfil = _perfil(reglas=[regla])
+    # 4 × 60' + larga de 90' = 27 % → no llega.
+    sesiones = [_con_duracion(d, 60) for d in (1, 2, 3, 5)] + [_con_duracion(6, 90)]
+    corta = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE, horas=5.5, sesiones=sesiones)]))
+    violaciones = validar_plan(corta, perfil).violaciones
+    assert len(violaciones) == 1 and "el 27.3% del tiempo semanal" in violaciones[0].mensaje
+    # Con larga de 120' (33 %) cumple; y en una descarga la regla no aplica.
+    sesiones[-1] = _con_duracion(6, 120)
+    assert validar_plan(_plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE, horas=6, sesiones=sesiones)])), perfil).violaciones == []
+    sesiones[-1] = _con_duracion(6, 30)
+    assert validar_plan(_plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, DESCARGA, horas=4.5, sesiones=sesiones)])), perfil).violaciones == []
+
+
+def test_z2_como_maximo_15_por_ciento_salvo_deficiencia_aerobica():
+    regla = _regla("R-Z2", {"z2_max_pct_semanal": 15}, solo_si=CondicionAtleta.SIN_DEFICIENCIA_AEROBICA)
+    perfil = _perfil(reglas=[regla], deficiencia_aerobica_pct=10)
+    sesiones = [_con_duracion(1, 60, zona=ZonasFC.Z2), _con_duracion(3, 60), _con_duracion(6, 120)]
+    plan = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE, horas=4, sesiones=sesiones)]))
+
+    sin_deficit = FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=160, fc_lactato=172))  # 7,5 %
+    violaciones = validar_plan(plan, perfil, sin_deficit).violaciones
+    assert len(violaciones) == 1 and "son el 25% del tiempo semanal" in violaciones[0].mensaje
+
+    con_deficit = FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149, fc_lactato=172))  # 15 %
+    resultado = validar_plan(plan, perfil, con_deficit)
+    assert resultado.violaciones == [] and "R-Z2" in resultado.reglas_evaluadas
+
+    # Sin umbral de lactato no se sabe: no evaluable, nunca "cumplida".
+    sin_lt = validar_plan(plan, perfil, FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149)))
+    assert [r.regla_id for r in sin_lt.reglas_no_evaluables] == ["R-Z2"]
+    assert "R-Z2" not in sin_lt.reglas_evaluadas
+
+
+def test_conteo_segun_deficiencia_aerobica():
+    reglas = [
+        ReglaConteoMicrociclo(id="C-2", descripcion=".", clase_sesion=ClaseSesion.ESPECIFICO, maximo=2,
+                              solo_si=CondicionAtleta.SIN_DEFICIENCIA_AEROBICA),
+        ReglaConteoMicrociclo(id="C-1", descripcion=".", clase_sesion=ClaseSesion.ESPECIFICO, maximo=1,
+                              solo_si=CondicionAtleta.CON_DEFICIENCIA_AEROBICA),
+    ]
+    perfil = _perfil(reglas_conteo_microciclo=reglas, deficiencia_aerobica_pct=10)
+    dos_intensas = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE, por_clase={ClaseSesion.ESPECIFICO: 2})]))
+    con_deficit = FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149, fc_lactato=172))
+    assert [v.regla_id for v in validar_plan(dos_intensas, perfil, con_deficit).violaciones] == ["C-1"]
+    sin_deficit = FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=160, fc_lactato=172))
+    assert validar_plan(dos_intensas, perfil, sin_deficit).violaciones == []
+
+
+def test_solo_se_usan_los_tipos_de_semana_del_perfil():
+    tipos = TiposSemana(id="T-1", descripcion=".", tipos={SEM_BASE: "B", DESCARGA: "R"})
+    perfil = _perfil(tipos_semana=tipos)
+    plan = _plan((ObjetivoMesociclo.BASE_AEROBICA, [_micro(0, SEM_BASE), _micro(1, CARGA)]))
+    violaciones = validar_plan(plan, perfil).violaciones
+    assert [v.regla_id for v in violaciones] == ["T-1"] and "tipo Carga" in violaciones[0].mensaje
+
+
+def test_deficiencia_aerobica_es_el_test_del_10_por_ciento():
+    assert deficiencia_aerobica(Umbrales(fc_aerobico=149, fc_lactato=170), 10) is True  # 14 %
+    assert deficiencia_aerobica(Umbrales(fc_aerobico=160, fc_lactato=172), 10) is False  # 7,5 %
+    assert deficiencia_aerobica(Umbrales(fc_aerobico=149), 10) is None

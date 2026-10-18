@@ -12,7 +12,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
-from core.methodology import AnclaZona, DefinicionZonas, LimiteZona
+from core.methodology import AnclaZona, CondicionAtleta, DefinicionZonas, LimiteZona, PerfilMetodologia
 from core.training import ClaseSesion, Plan, RangoFC, ZonasFC
 
 
@@ -169,3 +169,23 @@ def rangos_fc(definicion: Optional[DefinicionZonas], umbrales: Umbrales) -> dict
         if minimo is not None and maximo is not None and minimo < maximo:
             rangos[zona] = RangoFC(minimo=minimo, maximo=maximo)
     return rangos
+
+
+def deficiencia_aerobica(umbrales: Umbrales, pct: float) -> Optional[bool]:
+    """True si el umbral de lactato supera al aeróbico en más de `pct` %
+    (test del 10 % de Uphill Athlete). None si falta alguno de los dos."""
+    if umbrales.fc_aerobico is None or umbrales.fc_lactato is None:
+        return None
+    return umbrales.fc_lactato / umbrales.fc_aerobico > 1 + pct / 100
+
+
+def condiciones_atleta(perfil: PerfilMetodologia, atleta: Optional[FichaAtleta]) -> dict[CondicionAtleta, Optional[bool]]:
+    """Qué condiciones cumple el atleta: True, False o None si no se puede
+    saber (sin ficha, sin umbrales o sin criterio en el perfil)."""
+    deficit = None
+    if atleta is not None and perfil.deficiencia_aerobica_pct is not None:
+        deficit = deficiencia_aerobica(atleta.umbrales, perfil.deficiencia_aerobica_pct)
+    return {
+        CondicionAtleta.CON_DEFICIENCIA_AEROBICA: deficit,
+        CondicionAtleta.SIN_DEFICIENCIA_AEROBICA: None if deficit is None else not deficit,
+    }

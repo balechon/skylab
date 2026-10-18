@@ -169,7 +169,7 @@ class Herramientas:
             plan = Plan.model_validate_json(plan_json)
         except ValidationError as error:
             return SalidaTool(contenido=_errores_pydantic(error), es_error=True)
-        resultado = validar_plan(plan, self.ctx.perfil)
+        resultado = validar_plan(plan, self.ctx.perfil, self.ctx.atleta)
         return SalidaTool(contenido=_json({**resultado.model_dump(mode="json"), "valido": resultado.valido, "completo": resultado.completo}))
 
     def _tool_entregar_resultado(self, resultado_json: str) -> SalidaTool:

@@ -110,8 +110,9 @@ reglas:
 
   - id: "UA-CARGA-002"
     categoria: "Carga"
-    descripcion: "En semanas de base e intensidad, la salida larga es el 30–40 % de la distancia o el desnivel semanal (más en semanas de poco volumen), y el resto se reparte en al menos cuatro sesiones (cap. 11, B Week e I Week)."
+    descripcion: "En semanas de base e intensidad, la salida larga es el 30–40 % de la distancia o el desnivel semanal (más en semanas de poco volumen), y el resto se reparte en al menos cuatro sesiones (cap. 11, B Week e I Week). El motor comprueba el mínimo; el máximo es orientativo."
     clase_sesion: "Fondo"
+    tipos_microciclo: ["Base", "Intensidad"]
     parametros:
       larga_min_pct_semana: 30
       larga_max_pct_semana: 40
@@ -190,6 +191,8 @@ reglas:
   - id: "UA-INTENSIDAD-008"
     categoria: "Intensidad"
     descripcion: "En semanas de base, de recuperación y de especificidad, la Z2 no pasa del 15 % del volumen semanal y el resto de la base va en Z1, salvo en el síndrome de deficiencia aeróbica (más de un 10 % entre umbrales), en el que casi toda la base va en Z2. Al introducir Z3 o Z4 se deja la Z2 y la base pasa a Z1 (cap. 11, B Week; cap. 13, Notes on Adding More Intensity)."
+    tipos_microciclo: ["Base", "Descarga", "Especificidad"]
+    solo_si: "sin_deficiencia_aerobica"
     parametros:
       z2_max_pct_semanal: 15
 
@@ -297,13 +300,18 @@ reglas_secuenciales:
 # =====================================================================
 reglas_conteo_microciclo:
 
-  # Comprobada por el motor. PENDIENTE: el libro permite 2 solo con un 10 %
-  # o menos entre umbrales; con más diferencia, 1 (ver categorias_atleta y
-  # tests). Hasta tener tus umbrales queda el máximo general.
+  # Comprobadas por el motor según el test del 10 % (umbrales de la ficha).
   - id: "UA-CONTEO-001"
-    descripcion: "En el periodo de base, como mucho dos sesiones intensas por semana si la diferencia entre umbrales es del 10 % o menos; si es mayor, una, y sin Z3 todavía (cap. 11, The Cornerstone of the Base)."
+    descripcion: "En el periodo de base, con un 10 % o menos de diferencia entre umbrales, como mucho dos sesiones intensas por semana (cap. 11, The Cornerstone of the Base)."
     clase_sesion: "Específico"
     maximo: 2
+    solo_si: "sin_deficiencia_aerobica"
+
+  - id: "UA-CONTEO-002"
+    descripcion: "Con más de un 10 % de diferencia entre umbrales (deficiencia aeróbica), como mucho una sesión intensa por semana y sin Z3 todavía (cap. 11, The Cornerstone of the Base)."
+    clase_sesion: "Específico"
+    maximo: 1
+    solo_si: "con_deficiencia_aerobica"
 
 # =====================================================================
 # reglas_ajuste — el libro no da reglas "métrica → acción" con las
@@ -367,6 +375,27 @@ zonas_fc:
     Z4: { desde: { ancla: "LT" }, hasta: { ancla: "FCmax" } }
 
 # =====================================================================
+# Deficiencia aeróbica (test del 10 %): el umbral de lactato supera al
+# aeróbico en más de este porcentaje. Decide qué reglas aplican (solo_si).
+# =====================================================================
+deficiencia_aerobica_pct: 10
+
+# =====================================================================
+# tipos_semana — B, I, R, S, T y G del libro (cap. 11, Step 3). El plan solo
+# puede usar estos tipos; la R es la semana de Descarga.
+# =====================================================================
+tipos_semana:
+  id: "UA-SEMANAS-001"
+  descripcion: "Tipos de semana del macrociclo: base (B), intensidad (I), recuperación (R), especificidad (S), taper (T) y carrera (G). Se elige el tipo de cada semana en el macrociclo y se rellena con su receta (cap. 11, Step 2 y Step 3)."
+  tipos:
+    Base: "B. Acumular tiempo, distancia y desnivel en Z1–Z2. Larga del 30–40 % del volumen y el resto en al menos 4 sesiones, dos con bajadas rápidas cortas. Dos sesiones de fuerza (general o específica) y dos de core. Recuperación activa al menos 3 veces. Si la fuerza muscular específica (ME) es tu punto débil, empezar aquí con ella."
+    Intensidad: "I. Como la B (no la sustituye), añadiendo Z3 o Z4: Z3 al principio no más del 5 % del tiempo semanal; asimilable en 48 h. Se deja la ME. Un día de sprints en cuesta y dos de core."
+    Descarga: "R. Volumen al 50 % (40–60 %), poco estructurada, con días libres si hace falta. Larga del 40 % al final de la semana, otra sesión del 20 % y el resto en zona de recuperación (al menos dos). Intensidad, sprints y ME a la mitad. Un core. El domingo deberías tener ganas de atacar la semana siguiente."
+    Especificidad: "S. Para ultras: dos largas seguidas que suman el 60–80 % del volumen semanal, el resto en al menos 3 sesiones; sin Z3 y una sola sesión de Z4 con el volumen de la semana anterior, separada 72 h de las largas. Sin ME. Un día de sprints y dos de core."
+    Taper: "T. Larga del 50 % del volumen semanal y una sesión de Z2 de no más del 10 %; el resto, recuperación. Intensidad corta con descansos largos, un 30 % menos cada semana; sprints también un 30 % menos. Un core. Ya no se entrena nada nuevo: la carrera A pide un taper más marcado que la B."
+    Carrera: "G. Semana de carrera: solo zona de recuperación, como mucho 4 días; en dos de ellos, 3–4 aceleraciones de 30 s con 3 min suaves entre ellas. Sin fuerza."
+
+# =====================================================================
 # SECCIONES NUEVAS — el modelo todavía no las acepta.
 # =====================================================================
 
@@ -418,14 +447,6 @@ tests:
 
 # Recetas por tipo de semana: B (base), I (intensidad), R (recuperación),
 # S (especificidad), T (taper) y G (semana de carrera). Cap. 11, Step 3.
-tipos_semana:
-  B: "Acumular tiempo, distancia y desnivel en Z1–Z2. Larga del 30–40 % del volumen y el resto en al menos 4 sesiones, dos con bajadas rápidas cortas. Dos sesiones de fuerza (general o específica) y dos de core. Recuperación activa al menos 3 veces. Si la fuerza muscular específica (ME) es tu punto débil, empezar aquí con ella."
-  I: "Como la B (no la sustituye), añadiendo Z3 o Z4: Z3 al principio no más del 5 % del tiempo semanal; asimilable en 48 h. Se deja la ME. Un día de sprints en cuesta y dos de core."
-  R: "Volumen al 50 %, poco estructurada, con días libres si hace falta. Larga del 40 % al final de la semana, otra sesión del 20 % y el resto en zona de recuperación (al menos dos). Intensidad, sprints y ME a la mitad. Un core. El domingo deberías tener ganas de atacar la semana siguiente."
-  S: "Para ultras: dos largas seguidas que suman el 60–80 % del volumen semanal, el resto en al menos 3 sesiones; sin Z3 y una sola sesión de Z4 con el volumen de la semana anterior, separada 72 h de las largas. Sin ME. Un día de sprints y dos de core."
-  T: "Larga del 50 % del volumen semanal y una sesión de Z2 de no más del 10 %; el resto, recuperación. Intensidad corta con descansos largos, un 30 % menos cada semana; sprints también un 30 % menos. Un core. Ya no se entrena nada nuevo: la carrera A pide un taper más marcado que la B."
-  G: "Semana de carrera: solo zona de recuperación, como mucho 4 días; en dos de ellos, 3–4 aceleraciones de 30 s con 3 min suaves entre ellas. Sin fuerza."
-
 # Semanas de ejemplo del libro: reparto del volumen por día. Los
 # porcentajes son orientativos según el propio libro. "ADS": con síndrome de
 # deficiencia aeróbica, la Z1 pasa a Z2.

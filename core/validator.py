@@ -17,18 +17,22 @@ from typing import Callable, Iterator, Optional
 
 from pydantic import BaseModel, Field
 
+from core.athlete import FichaAtleta, condiciones_atleta
 from core.methodology import (
+    CondicionAtleta,
     PerfilMetodologia,
     RegistroRegla,
     RegistroReglaSecuencial,
     ReglaConteoMicrociclo,
     RestriccionGlobal,
     SecuenciaBloques,
+    TiposSemana,
 )
 from core.training import (
     Mesociclo,
     Microciclo,
     Plan,
+    ClaseSesion,
     SesionPlanificada,
     TipoMicrociclo,
     ZonasFC,
@@ -86,6 +90,21 @@ def _aplica_a_sesion(regla: RegistroRegla, sesion: SesionPlanificada, meso: Meso
     )
 
 
+def _aplica_a_semana(regla: RegistroRegla, micro: Microciclo, meso: Mesociclo) -> bool:
+    return (regla.objetivo_mesociclo is None or regla.objetivo_mesociclo == meso.objetivo) and (
+        not regla.tipos_microciclo or micro.tipo_microciclo in regla.tipos_microciclo
+    )
+
+
+def _tiempo_por_sesion(micro: Microciclo) -> Optional[list[tuple[SesionPlanificada, float]]]:
+    """Minutos de cada sesión con carga de una semana detallada, o None si
+    alguna no tiene duración (entonces no se puede medir en tiempo)."""
+    con_carga = [s for s in micro.sesiones if s.clase_sesion != ClaseSesion.DESCANSO]
+    if any(s.duracion_objetivo is None for s in con_carga):
+        return None
+    return [(s, s.duracion_objetivo / timedelta(minutes=1)) for s in con_carga]
+
+
 # ---------- comprobaciones por parámetro conocido ----------
 
 def _max_carga_consecutiva(plan: Plan, regla_id: str, maximo: int) -> list[Violacion]:
@@ -94,7 +113,7 @@ def _max_carga_consecutiva(plan: Plan, regla_id: str, maximo: int) -> list[Viola
     violaciones = []
     seguidos = 0
     for micro, _ in _microciclos(plan):
-        if micro.tipo_microciclo == TipoMicrociclo.CARGA:
+        if micro.tipo_microciclo.es_carga:
             seguidos += 1
             if seguidos == maximo + 1:
                 violaciones.append(
@@ -109,6 +128,96 @@ def _max_carga_consecutiva(plan: Plan, regla_id: str, maximo: int) -> list[Viola
                 )
         else:
             seguidos = 0
+    return violaciones
+
+
+def _reduccion_descarga(plan: Plan, regla: RegistroRegla, minimo: float, maximo: float) -> list[Violacion]:
+    """Cada semana de descarga baja el volumen entre `minimo` y `maximo` %
+    respecto a la última semana de carga anterior."""
+    violaciones = []
+    referencia: Optional[Microciclo] = None
+    for micro, meso in _microciclos(plan):
+        if micro.tipo_microciclo.es_carga:
+            referencia = micro
+            continue
+        if micro.tipo_microciclo != TipoMicrociclo.DESCARGA or referencia is None:
+            continue
+        if not _aplica_a_semana(regla, micro, meso):
+            continue
+        comparable = _volumen_comparable(referencia, micro)
+        cambio = variacion_pct(comparable[1], comparable[2]) if comparable else None
+        if cambio is None:
+            continue
+        reduccion = -cambio
+        if not minimo <= reduccion <= maximo:
+            violaciones.append(
+                Violacion(
+                    regla_id=regla.id,
+                    fecha=micro.fecha_inicio,
+                    mensaje=(
+                        f"La descarga del {micro.fecha_inicio} baja la {comparable[0]} un {reduccion:g}% respecto a "
+                        f"la semana de carga del {referencia.fecha_inicio}; debe bajar entre {minimo:g} y {maximo:g}%."
+                    ),
+                )
+            )
+    return violaciones
+
+
+def _proporcion_larga(plan: Plan, regla: RegistroRegla, minimo: float) -> list[Violacion]:
+    """En las semanas detalladas a las que aplica, la sesión más larga (de la
+    clase de la regla, si la fija) es al menos `minimo` % del tiempo semanal.
+
+    El máximo de la regla no se comprueba: el libro admite superarlo en las
+    semanas de poco volumen, así que queda como guía para el agente."""
+    violaciones = []
+    for micro, meso in _microciclos(plan):
+        if not micro.detallado or not _aplica_a_semana(regla, micro, meso):
+            continue
+        tiempos = _tiempo_por_sesion(micro)
+        if not tiempos:
+            continue
+        total = sum(minutos for _, minutos in tiempos)
+        candidatas = [m for s, m in tiempos if regla.clase_sesion is None or s.clase_sesion == regla.clase_sesion]
+        larga = max(candidatas, default=0)
+        pct = round(100 * larga / total, 1)
+        if pct < minimo:
+            violaciones.append(
+                Violacion(
+                    regla_id=regla.id,
+                    fecha=micro.fecha_inicio,
+                    mensaje=(
+                        f"En la semana del {micro.fecha_inicio} la sesión larga es el {pct:g}% del tiempo semanal; "
+                        f"debe ser al menos el {minimo:g}%."
+                    ),
+                )
+            )
+    return violaciones
+
+
+def _zona_max_semanal(plan: Plan, regla: RegistroRegla, zona: ZonasFC, maximo: float) -> list[Violacion]:
+    """En las semanas detalladas a las que aplica, las sesiones en `zona` no
+    pasan del `maximo` % del tiempo semanal."""
+    violaciones = []
+    for micro, meso in _microciclos(plan):
+        if not micro.detallado or not _aplica_a_semana(regla, micro, meso):
+            continue
+        tiempos = _tiempo_por_sesion(micro)
+        if not tiempos:
+            continue
+        total = sum(minutos for _, minutos in tiempos)
+        en_zona = sum(m for s, m in tiempos if s.zona_fc_objetivo == zona)
+        pct = round(100 * en_zona / total, 1)
+        if pct > maximo:
+            violaciones.append(
+                Violacion(
+                    regla_id=regla.id,
+                    fecha=micro.fecha_inicio,
+                    mensaje=(
+                        f"En la semana del {micro.fecha_inicio} las sesiones en {zona.value} son el {pct:g}% del "
+                        f"tiempo semanal; el máximo es {maximo:g}%."
+                    ),
+                )
+            )
     return violaciones
 
 
@@ -135,7 +244,7 @@ def _incremento_maximo(plan: Plan, regla: RegistroRegla, maximo_pct: float) -> l
     violaciones = []
     referencia: Optional[Microciclo] = None
     for micro, meso in _microciclos(plan):
-        if micro.tipo_microciclo != TipoMicrociclo.CARGA:
+        if not micro.tipo_microciclo.es_carga:
             continue
         aplica = regla.objetivo_mesociclo is None or regla.objetivo_mesociclo == meso.objetivo
         if aplica and referencia is not None:
@@ -216,6 +325,15 @@ _EVALUADORES_REGLA: dict[frozenset[str], _EvaluadorRegla] = {
     ),
     frozenset({"microciclos_carga_antes_descarga"}): lambda plan, r: _max_carga_consecutiva(
         plan, r.id, int(r.parametros["microciclos_carga_antes_descarga"])
+    ),
+    frozenset({"reduccion_descarga_min_pct", "reduccion_descarga_max_pct"}): lambda plan, r: _reduccion_descarga(
+        plan, r, float(r.parametros["reduccion_descarga_min_pct"]), float(r.parametros["reduccion_descarga_max_pct"])
+    ),
+    frozenset({"larga_min_pct_semana", "larga_max_pct_semana"}): lambda plan, r: _proporcion_larga(
+        plan, r, float(r.parametros["larga_min_pct_semana"])
+    ),
+    frozenset({"z2_max_pct_semanal"}): lambda plan, r: _zona_max_semanal(
+        plan, r, ZonasFC.Z2, float(r.parametros["z2_max_pct_semanal"])
     ),
 }
 
@@ -316,11 +434,53 @@ def _secuencia_bloques(plan: Plan, secuencia: SecuenciaBloques) -> list[Violacio
     return violaciones
 
 
+def _tipos_semana(plan: Plan, tipos: TiposSemana) -> list[Violacion]:
+    permitidos = ", ".join(t.value for t in tipos.tipos)
+    return [
+        Violacion(
+            regla_id=tipos.id,
+            fecha=micro.fecha_inicio,
+            mensaje=(
+                f"La semana del {micro.fecha_inicio} es de tipo {micro.tipo_microciclo.value}; "
+                f"la metodología solo usa: {permitidos}."
+            ),
+        )
+        for micro, _ in _microciclos(plan)
+        if micro.tipo_microciclo not in tipos.tipos
+    ]
+
+
 # ---------- punto de entrada ----------
 
-def validar_plan(plan: Plan, perfil: PerfilMetodologia) -> ResultadoValidacion:
-    """Comprueba el plan contra todas las reglas de plan del perfil."""
+def validar_plan(
+    plan: Plan, perfil: PerfilMetodologia, atleta: Optional[FichaAtleta] = None
+) -> ResultadoValidacion:
+    """Comprueba el plan contra todas las reglas de plan del perfil. Las
+    reglas que dependen del atleta (solo_si) se evalúan con su ficha; si no se
+    puede saber si aplican, quedan como no evaluables."""
     resultado = ResultadoValidacion()
+    condiciones = condiciones_atleta(perfil, atleta)
+
+    def aplica(regla_id: str, condicion: Optional[CondicionAtleta]) -> bool:
+        """Si la regla se debe evaluar para este atleta. Si no aplica, se da
+        por cumplida; si no se sabe, se reporta como no evaluable."""
+        if condicion is None:
+            return True
+        cumple = condiciones[condicion]
+        if cumple is None:
+            resultado.reglas_no_evaluables.append(
+                ReglaNoEvaluable(
+                    regla_id=regla_id,
+                    motivo=(
+                        f"Solo aplica si el atleta está {condicion.value.replace('_', ' ')} y no se puede saber: "
+                        "faltan sus umbrales aeróbico y de lactato (o el perfil no define deficiencia_aerobica_pct)."
+                    ),
+                )
+            )
+            return False
+        if not cumple:
+            resultado.reglas_evaluadas.append(regla_id)
+        return cumple
 
     def registrar(regla_id: str, violaciones: list[Violacion]) -> None:
         resultado.reglas_evaluadas.append(regla_id)
@@ -336,6 +496,8 @@ def validar_plan(plan: Plan, perfil: PerfilMetodologia) -> ResultadoValidacion:
         )
 
     for regla in perfil.reglas:
+        if not aplica(regla.id, regla.solo_si):
+            continue
         evaluador = _EVALUADORES_REGLA.get(frozenset(regla.parametros))
         if evaluador is None:
             no_evaluable(regla.id, regla.parametros)
@@ -353,7 +515,11 @@ def validar_plan(plan: Plan, perfil: PerfilMetodologia) -> ResultadoValidacion:
         registrar(regla.id, _secuencial(plan, regla))
 
     for regla in perfil.reglas_conteo_microciclo:
-        registrar(regla.id, _conteo(plan, regla))
+        if aplica(regla.id, regla.solo_si):
+            registrar(regla.id, _conteo(plan, regla))
+
+    if perfil.tipos_semana is not None:
+        registrar(perfil.tipos_semana.id, _tipos_semana(plan, perfil.tipos_semana))
 
     # Solo la secuencia del modo del plan; las de otros modos no aplican.
     secuencia = perfil.secuencia_para(plan.modo)
