@@ -61,6 +61,36 @@ curl -X POST -H "$H" -H "Content-Type: application/json" \
 curl -X POST -H "$H" localhost:8001/publicar
 ```
 
+## Ficha del atleta
+
+Edad, categoría, umbrales de FC y disponibilidad. El agente la lee con la
+tool `obtener_atleta` y la guardia rechaza cualquier plan que no quepa en la
+disponibilidad. Cada `PUT` guarda una versión nueva; cada ejecución del agente
+guarda una copia de la ficha con la que planificó.
+
+```bash
+curl -X PUT -H "Authorization: Bearer $PB_COACH_API_TOKEN"      -H "Content-Type: application/json; charset=utf-8"      --data-binary @ficha.json localhost:8000/atleta
+curl -H "Authorization: Bearer $PB_COACH_API_TOKEN" localhost:8000/atleta
+```
+
+```json
+{
+  "edad": 31,
+  "categoria": "1",
+  "umbrales": {"fc_aerobico": 149, "metodo_aerobico": "MAF (180 − edad)"},
+  "disponibilidad": {
+    "duracion_max_dia": "PT1H30M",
+    "dias_sin_entrenar": [],
+    "dias_largos": ["sábado", "domingo"],
+    "dias_largos_por_semana": 1,
+    "duracion_max_dia_largo": null
+  }
+}
+```
+
+`dias_largos_por_semana: 1` con sábado y domingo significa "uno de los dos,
+sin límite"; el resto de días, como mucho `duracion_max_dia`.
+
 ## Nota para Windows (Git Bash)
 
 `curl -d '{"modo": "Construcción", ...}'` puede enviar la "ó" en una

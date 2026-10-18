@@ -3,6 +3,8 @@
 #
 #   GET  /health            sin autenticación (healthcheck)
 #   POST /plan              crear un ciclo nuevo
+#   GET  /atleta            ficha vigente del atleta
+#   PUT  /atleta            guarda una versión nueva de la ficha
 #   POST /semana/ajustar    ajuste semanal del plan vigente; cuerpo opcional con
 #                           los comentarios del atleta; ?forzar=true para
 #                           rehacer una semana ya ajustada
@@ -27,6 +29,8 @@ from sqlalchemy.orm import sessionmaker
 from agent import servicio
 from agent.esquemas import ComentariosAtleta, SolicitudCiclo
 from agent.llm import crear_modelo
+from core.athlete import FichaAtleta
+from persistence import repository as repo
 from persistence.db import crear_engine, crear_sesiones
 
 app = FastAPI(title="pb-coach")
@@ -123,3 +127,21 @@ def ajustar_semana(
     except servicio.PerfilIncompleto as error:
         raise HTTPException(status_code=422, detail=str(error))
     return _respuesta(respuesta)
+
+
+@app.get("/atleta", dependencies=[Depends(exigir_token)])
+def obtener_atleta(sesiones_db: sessionmaker = Depends(obtener_sesiones_db)) -> FichaAtleta:
+    with sesiones_db() as db:
+        ficha = repo.ficha_vigente(db)
+    if ficha is None:
+        raise HTTPException(status_code=404, detail="Todavía no hay ficha del atleta")
+    return ficha
+
+
+@app.put("/atleta", dependencies=[Depends(exigir_token)])
+def guardar_atleta(ficha: FichaAtleta, sesiones_db: sessionmaker = Depends(obtener_sesiones_db)) -> FichaAtleta:
+    # Cada PUT añade una versión: las ejecuciones guardan la copia con la que
+    # planificaron, así que cambiar la ficha no reescribe el pasado.
+    with sesiones_db.begin() as db:
+        repo.guardar_ficha(db, ficha)
+    return ficha

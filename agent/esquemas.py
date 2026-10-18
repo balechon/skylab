@@ -12,6 +12,7 @@ from typing import Optional
 
 from pydantic import BaseModel, Field, model_validator
 
+from core.athlete import FichaAtleta
 from core.deviation import EvaluacionSemana
 from core.methodology import PerfilMetodologia
 from core.training import Carrera, ModoPlan, Plan, SesionRealizada
@@ -61,6 +62,7 @@ class ContextoAgente(BaseModel):
     plan_vigente: Optional[Plan] = None          # solo ajuste_semanal
     evaluacion: Optional[EvaluacionSemana] = None  # solo ajuste_semanal, ya calculada por el motor
     comentarios: Optional[ComentariosAtleta] = None  # solo ajuste_semanal
+    atleta: Optional[FichaAtleta] = None  # ficha vigente; sin ella no hay restricciones de disponibilidad
 
     @model_validator(mode="after")
     def validar_operacion(self) -> "ContextoAgente":

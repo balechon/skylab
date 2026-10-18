@@ -18,9 +18,11 @@ from sqlalchemy import func, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
+from core.athlete import FichaAtleta
 from core.training import Plan, SesionRealizada
 from persistence.models import (
     EjecucionAgenteFila,
+    FichaAtletaFila,
     PublicacionGarminFila,
     PlanFila,
     PlanVersionFila,
@@ -233,3 +235,16 @@ def ajuste_aceptado(db: Session, plan_id: int, semana: date) -> Optional[int]:
         .order_by(PlanVersionFila.version.desc())
         .limit(1)
     )
+
+
+def guardar_ficha(db: Session, ficha: FichaAtleta) -> int:
+    """Añade una versión de la ficha del atleta; pasa a ser la vigente."""
+    fila = FichaAtletaFila(contenido=ficha.model_dump(mode="json"))
+    db.add(fila)
+    db.flush()
+    return fila.id
+
+
+def ficha_vigente(db: Session) -> Optional[FichaAtleta]:
+    contenido = db.scalar(select(FichaAtletaFila.contenido).order_by(FichaAtletaFila.id.desc()).limit(1))
+    return FichaAtleta.model_validate(contenido) if contenido is not None else None

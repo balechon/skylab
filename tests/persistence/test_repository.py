@@ -173,3 +173,14 @@ def test_registrar_ejecucion(db):
         tokens_salida=1_800,
     )
     assert ejecucion_id > 0
+
+
+# ---------- ficha del atleta ----------
+
+def test_la_ficha_vigente_es_la_ultima_guardada(db):
+    from core.athlete import FichaAtleta, Umbrales
+
+    assert repo.ficha_vigente(db) is None
+    repo.guardar_ficha(db, FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149)))
+    repo.guardar_ficha(db, FichaAtleta(edad=31, umbrales=Umbrales(fc_aerobico=149, fc_lactato=170)))
+    assert repo.ficha_vigente(db).umbrales.fc_lactato == 170

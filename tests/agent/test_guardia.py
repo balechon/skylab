@@ -216,3 +216,24 @@ def test_las_ultimas_semanas_sin_definir_se_rechazan():
     del plan.mesociclos[0].microciclos[-1]  # falta la descarga, la última semana del bloque
     problemas = revisar_resultado(resultado_valido(plan), contexto_ciclo())
     assert any(f"y {plan.mesociclos[0].fecha_fin}" in p for p in problemas)
+
+
+# ---------- disponibilidad del atleta ----------
+
+def _atleta(minutos_max: int):
+    from datetime import timedelta as td
+
+    from core.athlete import Disponibilidad, FichaAtleta
+
+    return FichaAtleta(edad=31, disponibilidad=Disponibilidad(duracion_max_dia=td(minutes=minutos_max)))
+
+
+def test_la_guardia_rechaza_sesiones_que_no_caben_en_la_disponibilidad():
+    problemas = revisar_resultado(resultado_valido(), contexto_ciclo(atleta=_atleta(10)))
+    assert problemas and all(p.startswith("Disponibilidad:") for p in problemas)
+    assert "puede como mucho 0:10" in problemas[0]
+
+
+def test_sin_ficha_o_con_disponibilidad_suficiente_no_hay_objeciones():
+    assert revisar_resultado(resultado_valido(), contexto_ciclo()) == []
+    assert revisar_resultado(resultado_valido(), contexto_ciclo(atleta=_atleta(600))) == []

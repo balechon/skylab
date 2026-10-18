@@ -44,6 +44,7 @@ def _sesion(dia, clase, tipo=None, zona=None, inicio=HOY):
         return SesionPlanificada(fecha=fecha, clase_sesion=clase)
     return SesionPlanificada(
         fecha=fecha, clase_sesion=clase, tipo_sesion=tipo, distancia_objetivo_km=8, zona_fc_objetivo=zona,
+        duracion_objetivo=timedelta(minutes=30 if tipo == TipoSesion.SERIES else 45),
         intervalos=SERIES_6x3 if tipo == TipoSesion.SERIES else None,
     )
 

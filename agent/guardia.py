@@ -10,6 +10,7 @@
 from agent.esquemas import ContextoAgente, EstadoResultado, Operacion, ResultadoAgente
 from datetime import timedelta
 
+from core.athlete import revisar_disponibilidad
 from core.training import Mesociclo, Microciclo, Plan
 from core.validator import validar_plan
 
@@ -58,6 +59,10 @@ def revisar_resultado(resultado: ResultadoAgente, ctx: ContextoAgente) -> list[s
             f"La semana del {proxima.fecha_inicio} es la próxima y debe tener sesiones concretas (nivel 1)."
         )
     problemas += _revisar_bloque_actual(plan, ctx)
+    if ctx.atleta is not None and ctx.atleta.disponibilidad is not None:
+        problemas += [
+            f"Disponibilidad: {p}" for p in revisar_disponibilidad(plan, ctx.atleta.disponibilidad, ctx.hoy)
+        ][:_MAX_VIOLACIONES_LISTADAS]
     return problemas
 
 

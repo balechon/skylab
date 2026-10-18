@@ -20,7 +20,7 @@ def sesiones_db(engine):
     fabrica = sessionmaker(bind=engine, expire_on_commit=False)
     yield fabrica
     with engine.begin() as conexion:
-        conexion.execute(text("TRUNCATE ejecucion_agente, plan_version, plan, sesion_realizada RESTART IDENTITY CASCADE"))
+        conexion.execute(text("TRUNCATE ejecucion_agente, plan_version, plan, sesion_realizada, ficha_atleta RESTART IDENTITY CASCADE"))
 
 
 def _entrega(resultado):
@@ -148,3 +148,18 @@ def test_los_comentarios_del_atleta_quedan_registrados_con_la_ejecucion(sesiones
         registro = db.scalars(select(EjecucionAgenteFila)).one().resultado
     assert registro["comentarios_atleta"]["general"] == "Viajo el jueves."
     assert registro["feedback"]["lo_que_paso"] == "No hubo actividad registrada esta semana."
+
+
+def test_la_ejecucion_guarda_la_ficha_con_la_que_se_planifico(sesiones_db):
+    from core.athlete import Disponibilidad, FichaAtleta
+
+    ficha = FichaAtleta(edad=31, categoria="1", disponibilidad=Disponibilidad(duracion_max_dia=timedelta(hours=10)))
+    with sesiones_db.begin() as db:
+        repo.guardar_ficha(db, ficha)
+
+    respuesta = servicio.crear_ciclo(sesiones_db, _entrega(resultado_valido()), contexto_ciclo().solicitud, hoy=HOY)
+
+    assert respuesta.version == 1
+    with sesiones_db() as db:
+        registro = db.scalars(select(EjecucionAgenteFila)).one().resultado
+    assert registro["ficha_atleta"]["categoria"] == "1"

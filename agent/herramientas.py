@@ -44,6 +44,13 @@ DEFINICIONES: list[dict[str, Any]] = [
         {},
     ),
     _definicion(
+        "obtener_atleta",
+        "Devuelve la ficha del atleta: edad, categoría, umbrales de FC y disponibilidad por día (máximo de "
+        "horas, días libres y días largos). La disponibilidad es una restricción dura: la revisión final "
+        "rechaza el plan que no la cumpla.",
+        {},
+    ),
+    _definicion(
         "resumen_historial",
         "Volumen realmente entrenado en las últimas N semanas cerradas (lunes a domingo; no incluye la semana en curso): sesiones, km, "
         "duración, desnivel, tiempo por zona de FC y carga (EPOC y sRPE). Ya agregado: nunca sesiones sueltas.",
@@ -112,6 +119,11 @@ class Herramientas:
 
     def _tool_obtener_perfil(self) -> SalidaTool:
         return SalidaTool(contenido=_json(self.ctx.perfil))
+
+    def _tool_obtener_atleta(self) -> SalidaTool:
+        if self.ctx.atleta is None:
+            return SalidaTool(contenido="No hay ficha del atleta: no hay restricciones de disponibilidad ni umbrales propios.")
+        return SalidaTool(contenido=_json(self.ctx.atleta))
 
     def _tool_resumen_historial(self, semanas: int) -> SalidaTool:
         if not 1 <= semanas <= SEMANAS_HISTORIAL_MAX:

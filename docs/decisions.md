@@ -554,3 +554,18 @@ es una sesión más de la semana. El tratamiento de cada prioridad sale de
 **Por qué**: priorizar carreras es como trabajan los entrenadores y permite un
 plan personalizado (una C por diversión no rompe la progresión hacia la A)
 sin que el LLM invente cómo tratar cada una.
+
+## 2026-10-17 — Ficha del atleta con disponibilidad como restricción dura
+
+**Decisión**: `core/athlete.py` define la ficha (edad, categoría, umbrales de
+FC, disponibilidad, lesiones). Se guarda versionada en Postgres
+(`ficha_atleta`, migración 0005), entra por `PUT /atleta` (después la enviará
+el servicio de Notion) y cada ejecución guarda una copia. La guardia rechaza
+sesiones en días libres, días que superan el máximo y más días largos por
+semana de los permitidos; con disponibilidad definida, toda sesión necesita
+`duracion_objetivo`. La disponibilidad manda sobre la metodología: si el
+perfil pide más de lo que cabe, el agente adapta y lo explica.
+
+**Por qué**: la metodología (Uphill Athlete) pide 5 o más sesiones y salidas
+largas que pueden no caber en la semana real del atleta. Sin una restricción
+dura en código, el plan sería bonito pero imposible de cumplir.

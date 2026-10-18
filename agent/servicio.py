@@ -16,6 +16,7 @@ from sqlalchemy.orm import sessionmaker
 
 from agent.esquemas import ComentariosAtleta, ContextoAgente, EstadoResultado, Operacion, SolicitudCiclo
 from agent.grafo import EjecucionAgente, ejecutar_agente
+from core.athlete import FichaAtleta
 from core.training import Microciclo, Plan
 from core.deviation import EvaluacionSemana, evaluar_semana
 from core.loader import cargar_perfil
@@ -67,10 +68,22 @@ def _ultimo_microciclo_cerrado(plan: Plan, hoy: date) -> Optional[Microciclo]:
     return cerrados[-1] if cerrados else None
 
 
-def _registro(ejecucion: EjecucionAgente, comentarios: Optional[ComentariosAtleta] = None) -> dict[str, Any]:
+def _ficha(sesiones_db: sessionmaker) -> Optional[FichaAtleta]:
+    with sesiones_db() as db:
+        return repo.ficha_vigente(db)
+
+
+def _registro(
+    ejecucion: EjecucionAgente,
+    comentarios: Optional[ComentariosAtleta] = None,
+    atleta: Optional[FichaAtleta] = None,
+) -> dict[str, Any]:
     registro = ejecucion.resultado.model_dump(mode="json") if ejecucion.resultado else {"detalle": ejecucion.detalle}
     if comentarios is not None:
         registro["comentarios_atleta"] = comentarios.model_dump(mode="json")
+    # Copia de la ficha con la que se planificó: la ficha puede cambiar después.
+    if atleta is not None:
+        registro["ficha_atleta"] = atleta.model_dump(mode="json")
     return registro
 
 
@@ -87,6 +100,7 @@ def crear_ciclo(
         perfil=perfil,
         sesiones=_sesiones_recientes(sesiones_db, hoy),
         solicitud=solicitud,
+        atleta=_ficha(sesiones_db),
     )
     ejecucion = ejecutar_agente(ctx, modelo)
     respuesta = RespuestaServicio(ejecucion=ejecucion)
@@ -102,7 +116,7 @@ def crear_ciclo(
             db,
             operacion=Operacion.CREAR_CICLO.value,
             estado=resultado.estado.value if resultado else ejecucion.estado,
-            resultado=_registro(ejecucion),
+            resultado=_registro(ejecucion, atleta=ctx.atleta),
             plan_version_id=version_id,
             modelo=ejecucion.modelo,
             tokens_entrada=ejecucion.tokens_entrada,
@@ -153,6 +167,7 @@ def ajuste_semanal(
         plan_vigente=plan,
         evaluacion=evaluacion,
         comentarios=comentarios,
+        atleta=_ficha(sesiones_db),
     )
     ejecucion = ejecutar_agente(ctx, modelo)
     respuesta = RespuestaServicio(ejecucion=ejecucion, plan_id=plan_id, evaluacion=evaluacion)
@@ -169,7 +184,7 @@ def ajuste_semanal(
             db,
             operacion=Operacion.AJUSTE_SEMANAL.value,
             estado=resultado.estado.value if resultado else ejecucion.estado,
-            resultado=_registro(ejecucion, comentarios),
+            resultado=_registro(ejecucion, comentarios, ctx.atleta),
             plan_version_id=version_id,
             modelo=ejecucion.modelo,
             tokens_entrada=ejecucion.tokens_entrada,

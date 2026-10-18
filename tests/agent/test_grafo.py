@@ -82,6 +82,7 @@ def test_el_modelo_recibe_system_cacheado_y_tools_estrictas():
     assert modelo.enlace["strict"] is True
     assert [t["name"] for t in modelo.enlace["tools"]] == [
         "obtener_perfil",
+        "obtener_atleta",
         "resumen_historial",
         "obtener_plan",
         "evaluar_semana",
@@ -208,3 +209,14 @@ def test_evaluar_semana_junta_dia_a_dia_los_comentarios_del_atleta():
     assert dia_martes["realizadas"][0]["rpe"] == 8 and dia_martes["realizadas"][0]["sensaciones"] == "Débil"
     assert evaluacion["otros_comentarios"] == [{"fecha": (semana.fecha_fin + timedelta(days=-1)).isoformat(), "texto": "Molestia leve en el gemelo."}]
     assert evaluacion["comentario_general"] == "El jueves viajo, mejor el fondo el domingo."
+
+
+def test_obtener_atleta_devuelve_la_ficha_o_avisa_si_no_hay():
+    from core.athlete import FichaAtleta, Umbrales
+    from tests.agent.planes import contexto_ciclo
+
+    sin_ficha = Herramientas(contexto_ciclo()).ejecutar("obtener_atleta", {})
+    assert "No hay ficha" in sin_ficha.contenido and not sin_ficha.es_error
+    ficha = FichaAtleta(edad=31, categoria="1", umbrales=Umbrales(fc_aerobico=149))
+    salida = json.loads(Herramientas(contexto_ciclo(atleta=ficha)).ejecutar("obtener_atleta", {}).contenido)
+    assert (salida["edad"], salida["categoria"], salida["umbrales"]["fc_aerobico"]) == (31, "1", 149)

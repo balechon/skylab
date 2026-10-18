@@ -62,3 +62,9 @@ def test_ajustar_acepta_comentarios_del_atleta(cliente, monkeypatch):
     assert respuesta.status_code == 409
     assert recibido["comentarios"].general == "Viajo el jueves."
     assert recibido["comentarios"].por_sesion[0].texto == "Me costó."
+
+
+def test_atleta_valida_la_ficha(cliente):
+    respuesta = cliente.put("/atleta", headers=CABECERA, json={"edad": 31, "umbrales": {"fc_aerobico": 170, "fc_lactato": 150}})
+    assert respuesta.status_code == 422
+    assert cliente.put("/atleta", json={"edad": 31}).status_code == 401

@@ -124,3 +124,14 @@ class PublicacionGarminFila(Base):
     nombre: Mapped[str] = mapped_column(String(100))
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     retirado_en: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True))
+
+
+class FichaAtletaFila(Base):
+    """Una versión de la ficha del atleta (JSONB). Cada cambio añade una fila;
+    la vigente es la última. Las anteriores quedan como historial."""
+
+    __tablename__ = "ficha_atleta"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    contenido: Mapped[dict[str, Any]] = mapped_column(JSONB)
