@@ -307,25 +307,40 @@ reglas_conteo_microciclo:
 
 # =====================================================================
 # reglas_ajuste — el libro no da reglas "métrica → acción" con las
-# métricas que hoy mide el motor; sus criterios están en
-# propuestas_propias (para decidir tú) y en fuera_del_modelo.
+# métricas que hoy mide el motor. Estas son interpretaciones numéricas del
+# atleta (origen propio), aceptadas el 2026-10-17.
 # =====================================================================
-reglas_ajuste: []
+reglas_ajuste:
+  - id: "UA-AJUSTE-001"
+    descripcion: "Si se cumple menos del 70 % del volumen planificado, se repite la semana en vez de progresar. Interpreta la regla de continuidad: perder más de un 5 % de la carga del mes obliga a dar un paso atrás y no se puede hacer como si se hubiera entrenado (cap. 3, Continuity)."
+    condicion:
+      metrica: "adherencia_volumen_pct"
+      operador: "<"
+      valor: 70
+    accion: "repetir_microciclo"
+    origen: "propio"
+
+  - id: "UA-AJUSTE-002"
+    descripcion: "Si la contrarreloj aeróbica no mejora entre dos tests seguidos, se reduce la carga. Interpreta que sin mejoras pequeñas en varias semanas algo falla (recuperación o progresión demasiado rápida) y que el ritmo en el AeT debería mejorar cada 2–4 semanas (cap. 5, Summary; cap. 9, Outline for Planning)."
+    condicion:
+      metrica: "mejora_test_pct"
+      operador: "<="
+      valor: 0
+    accion: "reducir_carga"
+    origen: "propio"
 
 # =====================================================================
 # secuencias_bloques
 # =====================================================================
 secuencias_bloques:
 
-  # PENDIENTE: la transición es para quien empieza su primera temporada
-  # estructurada (hasta 8 semanas), vuelve de un parón o cambia de deporte.
-  # Un atleta experimentado puede entrar directamente en la base. ¿La
-  # incluimos para ti?
+  # La transición es opcional (cap. 10): para quien empieza su primera
+  # temporada estructurada, vuelve de un parón o cambia de deporte. Decisión
+  # del atleta (2026-10-17): entrar directamente en la base.
   - id: "UA-BLOQUES-001"
-    descripcion: "Sin un objetivo grande, el entrenamiento puede ser casi solo base: es lo que más rinde en montaña y lo que permite competir sobre esa base. Va precedida de la transición cuando toca (cap. 4, Periodization; cap. 9, Outline for Planning)."
+    descripcion: "Sin un objetivo grande, el entrenamiento puede ser casi solo base: es lo que más rinde en montaña y lo que permite competir sobre esa base. Quien ya entrena con regularidad puede entrar directamente en la base, sin transición (cap. 4, Periodization; cap. 9, Outline for Planning; cap. 10)."
     modo: "Construcción"
     objetivos:
-      - "Transición"
       - "Base aeróbica"
 
   - id: "UA-BLOQUES-002"
@@ -508,7 +523,11 @@ reglas_carreras:
   - id: "UA-CARRERA-002"
     prioridad: "B"
     descripcion: "Carreras de preparación para la A, para probar forma, estrategia, material, alimentación y cabeza. No deben exigir mucho más que tu capacidad actual: solo una ligera bajada de carga unos días antes y después, sin romper la progresión (cap. 9, Outline for Planning; cap. 11, T Week)."
-    # PENDIENTE (propio): cuántos días y cuánto baja la carga ("unos días").
+    # Cifras de origen propio (decisión del atleta, 2026-10-17).
+    origen_cifras: "propio"
+    dias_descarga_antes: 3
+    dias_recuperacion_despues: 3
+    carga_pct: 70
   - id: "UA-CARRERA-003"
     prioridad: "C"
     descripcion: "Se entrenan como una sesión más, sin cambiar el plan; pueden ser tests de forma y se pueden añadir más tarde. Durante la base, solo carreras C, que apenas superen lo que haces en tus entrenamientos (cap. 9, Outline for Planning; cap. 11, Introduction to the Base Period)."
@@ -533,23 +552,17 @@ fuera_del_modelo:
   - "Disponibilidad real: calcular las horas libres de la semana después de trabajo, sueño, comidas, viajes y familia; es el techo de horas de entrenamiento (cap. 9, Outline for Planning)."
   - "Atletas de fibra rápida: más base Z1–Z2 y repeticiones de Z4 más cortas (menos de 2 min). De fibra lenta: dosis frecuentes y pequeñas de velocidad (cap. 3, Individuality)."
 
-# Reglas de origen "propio": interpretaciones numéricas de indicaciones
-# vagas del libro. NO están activas. Decide cuáles se quedan y con qué
-# cifras; las que aceptes pasan a reglas_ajuste o a sus secciones.
-propuestas_propias:
-  - id: "UA-AJUSTE-001"
-    base: "Continuidad, 5 % de la carga mensual (cap. 3)."
-    propuesta: "Si se cumple menos del 80 % del volumen planificado en una semana, repetir la semana (aproxima el 5 % mensual a una sola semana)."
-    condicion: { metrica: "adherencia_volumen_pct", operador: "<", valor: 80 }
-    accion: "repetir_microciclo"
-  - id: "UA-AJUSTE-002"
-    base: "Sin mejoras en varias semanas, algo falla (cap. 9); el ritmo en el AeT debería mejorar cada 2–4 semanas (cap. 5)."
-    propuesta: "Si la contrarreloj aeróbica no mejora entre dos tests seguidos, reducir la carga."
-    condicion: { metrica: "mejora_test_pct", operador: "<=", valor: 0 }
-    accion: "reducir_carga"
-  - id: "UA-AJUSTE-003"
-    base: "Notas A–F (cap. 4)."
-    propuesta: "Traducir la sensación de Garmin a notas: Muy fuerte/Fuerte = A, Normal = B, Débil = C, Muy débil = D, sesión no hecha = F; o poner una columna de nota en Notion."
-  - id: "UA-CARRERA-B-DIAS"
-    base: "Una B pide una ligera bajada de carga unos días antes y después (cap. 9)."
-    propuesta: "3 días antes y 3 días después, con la carga al 70 %."
+# Notas A–F del libro (cap. 4, Grading Your Workouts) a partir de la
+# sensación que registra Garmin. Origen propio (decisión del atleta,
+# 2026-10-17). Una sesión planificada y no hecha cuenta como F. Regla del
+# libro: más de dos C seguidas, o una C y una D en la misma semana, indica
+# que no se está asimilando la carga.
+notas_sesion:
+  origen: "propio"
+  desde_sensacion_garmin:
+    "Muy fuerte": "A"
+    "Fuerte": "A"
+    "Normal": "B"
+    "Débil": "C"
+    "Muy débil": "D"
+  no_realizada: "F"
