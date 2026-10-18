@@ -52,3 +52,7 @@ docs/*/snapshots/
 docs/*/node_modules/
 docs/*/CLAUDE.md
 docs/*/AGENTS.md
+
+# Fuentes con copyright (libros transcritos para uso personal)
+libro_completo.txt
+fuentes/
