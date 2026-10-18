@@ -13,6 +13,7 @@
 #
 #   docker compose up -d --build                   # postgres + api
 #   docker compose --profile garmin up -d --build  # + skylab-sync + garmin-mcp
+#   docker compose --profile garmin --profile notion up -d --build  # + skylab-notion
 #   docker compose run --rm --build test           # tests en el contenedor
 #
 # Requiere un .env con las contraseñas de Postgres y SKYLAB_API_TOKEN
@@ -85,6 +86,36 @@ services:
         condition: service_started
     restart: unless-stopped
 
+  # Interfaz del atleta en Notion: consulta Notion cada 3 minutos y habla con
+  # skylab-api y skylab-sync por la red interna. No publica puertos ni toca la
+  # base de datos. El token de Notion llega como secreto (archivo), nunca como
+  # variable de entorno. Primera vez: NOTION_SIMULACION=1 (lee, no escribe).
+  skylab-notion:
+    container_name: skylab-notion
+    build:
+      context: .
+      target: notion
+    profiles: ["notion"]
+    environment:
+      TZ: ${TZ:-America/Guayaquil}
+      SKYLAB_API_TOKEN: ${SKYLAB_API_TOKEN:-}
+      SKYLAB_API_URL: http://skylab-api:8000
+      SKYLAB_SYNC_URL: http://skylab-sync:8000
+      NOTION_TOKEN_FILE: /run/secrets/notion_token
+      NOTION_DS_ATLETA: ${NOTION_DS_ATLETA:-}
+      NOTION_DS_SEMANAS: ${NOTION_DS_SEMANAS:-}
+      NOTION_DS_ENTRENAMIENTOS: ${NOTION_DS_ENTRENAMIENTOS:-}
+      NOTION_INTERVALO_SEGUNDOS: ${NOTION_INTERVALO_SEGUNDOS:-180}
+      NOTION_SIMULACION: ${NOTION_SIMULACION:-}
+    secrets:
+      - notion_token
+    depends_on:
+      skylab-api:
+        condition: service_healthy
+      skylab-sync:
+        condition: service_started
+    restart: unless-stopped
+
   # Tests (incluidos los de persistencia, en un esquema temporal de la base
   # skylab que se borra al terminar).
   test:
@@ -123,6 +154,11 @@ secrets:
     file: ./secrets/garmin_email.txt
   garmin_password:
     file: ./secrets/garmin_password.txt
+  # Token de la conexión interna de Notion. En un servidor Linux, el archivo
+  # debe poder leerlo el usuario del contenedor (uid 1000): p. ej.
+  # chown 1000 secrets/notion_token.txt && chmod 400 secrets/notion_token.txt
+  notion_token:
+    file: ./secrets/notion_token.txt
 
 volumes:
   postgres-data:

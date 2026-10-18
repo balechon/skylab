@@ -1,0 +1,22 @@
+[project]
+name = "skylab-notion"
+version = "0.1.0"
+description = "Servicio que conecta Notion (la interfaz del atleta) con la API de SKYLAB. Solo habla con la API de Notion y con skylab-api / skylab-sync; no toca la base de datos."
+requires-python = ">=3.12"
+dependencies = [
+    "skylab-core",
+    "notion-client==3.1.0",
+    "httpx>=0.28",
+]
+
+[tool.uv.sources]
+skylab-core = { workspace = true }
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# La carpeta es el paquete: `notion/` se importa como `notion`.
+[tool.setuptools]
+packages = ["notion"]
+package-dir = { "notion" = "." }

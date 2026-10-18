@@ -3,6 +3,8 @@
 #
 #   api   skylab-agent  core + persistence + agent (anthropic, fastapi). Sin MCP.
 #   sync  skylab-sync   core + persistence + sync (mcp). Sin FastAPI ni anthropic.
+#   notion skylab-notion core + notion (notion-client). Sin base de datos: solo
+#                        habla con la API de Notion y con skylab-api / skylab-sync.
 #   test  todo el workspace + grupo dev, para correr pytest.
 #
 # El código se instala (no editable) en /src/.venv y los procesos corren
@@ -27,6 +29,7 @@ COPY core/pyproject.toml core/
 COPY persistence/pyproject.toml persistence/
 COPY sync/pyproject.toml sync/
 COPY agent/pyproject.toml agent/
+COPY notion/pyproject.toml notion/
 
 RUN useradd --create-home --uid 1000 app
 
@@ -70,6 +73,19 @@ HEALTHCHECK --interval=30s --timeout=3s --retries=3 \
 CMD ["uvicorn", "sync.app:app", "--host", "0.0.0.0", "--port", "8000"]
 
 
+# ---------- Notion ----------
+FROM base AS notion
+
+COPY core core
+COPY notion notion
+RUN --mount=type=cache,target=/root/.cache/uv \
+    uv sync --locked --package skylab-notion --no-dev --no-editable
+
+WORKDIR /app
+USER app
+CMD ["python", "-m", "notion"]
+
+
 # ---------- tests ----------
 FROM base AS test
 
@@ -77,6 +93,7 @@ COPY core core
 COPY persistence persistence
 COPY sync sync
 COPY agent agent
+COPY notion notion
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --locked --all-packages
 

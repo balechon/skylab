@@ -6,12 +6,13 @@
 #   persistence/  skylab-persistence  Postgres + migraciones
 #   sync/         skylab-sync         sync de Garmin (único con MCP)
 #   agent/        skylab-agent        agente LLM + API
+#   notion/       skylab-notion       interfaz del atleta en Notion (solo habla con APIs)
 #
 #   uv sync --all-packages     # entorno de desarrollo con todo
 #   uv run pytest
 
 [tool.uv.workspace]
-members = ["core", "persistence", "sync", "agent"]
+members = ["core", "persistence", "sync", "agent", "notion"]
 
 [dependency-groups]
 dev = [

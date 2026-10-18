@@ -57,6 +57,7 @@ core/           skylab-core         modelos (training, methodology) y motor dete
                                       (loader, calculator, validator, deviation). Sin IO.
 persistence/    skylab-persistence  Postgres: modelos, repositorio y migraciones Alembic
 sync/           skylab-sync         sync Garmin → Postgres vía MCP (garmin.py, app.py)
+notion/         skylab-notion       interfaz del atleta en Notion (consulta Notion cada 3 min; solo APIs)
 agent/          skylab-agent        agente LLM (bucle, tools, guardia, servicio) + api.py
 methodology/    Perfiles de metodología (YAML)
 tests/          Tests de todo el workspace

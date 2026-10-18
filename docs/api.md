@@ -95,6 +95,30 @@ curl -H "Authorization: Bearer $SKYLAB_API_TOKEN" localhost:8000/atleta
 `dias_largos_por_semana: 1` con sábado y domingo significa "uno de los dos,
 sin límite"; el resto de días, como mucho `duracion_max_dia`.
 
+## Servicio de Notion (skylab-notion)
+
+Notion es la interfaz del atleta. El servicio consulta Notion cada 3 minutos
+(sin webhooks: exigirían una URL pública) y solo habla con la API de Notion y
+con `skylab-api` / `skylab-sync`; no toca la base de datos.
+
+| Dirección | Qué hace |
+|---|---|
+| Notion → SKYLAB | Si cambia la fila de **Atleta**, la envía (`PUT /atleta`). Datos inválidos: aviso en "Mensaje SKYLAB" |
+| Notion → SKYLAB | Semana con **Evaluar** (semana ya terminada) o **Recalcular** (como mucho 2 por semana): sync de Garmin, ajuste con los comentarios de las sesiones de la semana cerrada y las Observaciones, feedback en la semana evaluada, casilla desmarcada y publicación en el reloj. Una por ciclo |
+| SKYLAB → Notion | Semanas y sesiones del plan vigente (Clave estable; nunca se borra nada: lo que sale del plan queda con Vigente desmarcado) |
+| SKYLAB → Notion | Lo realizado en Garmin en las columnas "Hecho"; lo no planificado, en su propia fila |
+
+```bash
+# secrets/notion_token.txt: token de la conexión interna "SKYLAB" (Notion →
+# Configuración → Conexiones). Ids de las bases en .env (NOTION_DS_*).
+docker compose --profile garmin --profile notion up -d --build
+docker compose --profile garmin --profile notion run --rm skylab-notion python -m notion --simulacion
+docker logs -f skylab-notion
+```
+
+Con `NOTION_SIMULACION=1` el servicio lee Notion y la API pero no escribe ni
+llama al modelo: registra lo que haría.
+
 ## Nota para Windows (Git Bash)
 
 `curl -d '{"modo": "Construcción", ...}'` puede enviar la "ó" en una

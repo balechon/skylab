@@ -12,7 +12,8 @@
 
 from typing import Any, Optional
 
-from core.training import ClaseSesion, RangoFC, SesionPlanificada, TipoSesion, ZonasFC
+from core.etiquetas import etiqueta_sesion
+from core.training import ClaseSesion, RangoFC, SesionPlanificada, ZonasFC
 
 PREFIJO_NOMBRE = "SKYLAB"  # identifica en la biblioteca de Garmin lo que crea SKYLAB
 
@@ -25,17 +26,6 @@ _PASO = {
 }
 # Etiquetas de cada paso, como se dicen al entrenar.
 _ETIQUETA_PASO = {"calentamiento": "Warmup", "vuelta_calma": "Cooldown", "recuperacion": "Rec"}
-_ETIQUETA_TIPO = {
-    TipoSesion.SERIES: "Series",
-    TipoSesion.TEMPO: "Tempo",
-    TipoSesion.UMBRAL: "Umbral",
-    TipoSesion.BASE: "Base",
-    TipoSesion.FONDO: "Fondo",
-    TipoSesion.FUERZA: "Fuerza",
-    TipoSesion.RECUPERACION: "Regenerativo",
-    TipoSesion.SPRINTS_CUESTA: "Hill sprints",
-    TipoSesion.ACELERACIONES: "Strides",
-}
 # Un esfuerzo de un minuto o menos no da tiempo a que la FC responda: esos
 # pasos van sin objetivo de FC (se hacen por sensación).
 _SIN_FC_HASTA_SEGUNDOS = 60
@@ -83,12 +73,6 @@ def _paso(
         paso["targetType"] = _ZONA_FC
         paso["zoneNumber"] = _NUMERO_ZONA[zona]
     return paso
-
-
-def etiqueta_sesion(sesion: SesionPlanificada) -> str:
-    if sesion.tipo_sesion is not None:
-        return _ETIQUETA_TIPO[sesion.tipo_sesion]
-    return sesion.clase_sesion.value
 
 
 def nombre_entrenamiento(sesion: SesionPlanificada) -> str:

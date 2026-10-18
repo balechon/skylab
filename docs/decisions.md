@@ -645,3 +645,23 @@ originales quedan como copia de seguridad hasta comprobar el nuevo stack) y
 la base y el rol se renombraron con `ALTER DATABASE/ROLE ... RENAME`, sin
 tocar los datos. Los tokens de Garmin se conservan: no hace falta volver a
 iniciar sesión.
+
+## 2026-10-18 — Servicio de Notion: conexión interna y consulta periódica
+
+**Decisión**: un paquete y contenedor aparte (`notion/`, `skylab-notion`) que
+solo habla con la API de Notion (versión 2025-09-03, data sources,
+`notion-client` 3.1.0) y con `skylab-api` / `skylab-sync`. Credencial: una
+conexión interna de Notion (bot propio, con acceso solo a la página SKYLAB y
+capacidades de leer, actualizar e insertar contenido). El token se monta como
+secreto de Docker (`secrets/notion_token.txt`), nunca en `.env`. Consulta
+Notion cada 3 minutos; Garmin se sincroniza cada 10 ciclos y antes de cada
+ajuste. Las peticiones son casillas (Evaluar / Recalcular) que el servicio
+desmarca; Recalcular está limitado a 2 por semana (cada uno es una llamada al
+modelo). Las filas llevan una Clave estable y nunca se borran. Modo
+simulación para la primera puesta en marcha.
+
+**Por qué**: las webhooks de Notion exigen una URL pública con HTTPS (romperían
+la regla de no exponer nada) y se entregan "como mucho una vez", así que la
+consulta periódica haría falta igual. La conexión interna limita el acceso a
+lo que se comparte con ella, no caduca y sus escrituras son del bot, no del
+atleta. Que el servicio no toque la base mantiene Notion sustituible.
