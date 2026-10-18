@@ -2,7 +2,8 @@
 #
 #   GET  /health     sin autenticación (healthcheck)
 #   POST /sync       Garmin → Postgres
-#   POST /publicar   próxima semana del plan vigente → Garmin (y al reloj)
+#   POST /publicar   próxima semana del plan vigente → Garmin (y al reloj);
+#                    ?forzar=true la vuelve a subir aunque ya esté publicada
 #
 # /sync y /publicar exigen "Authorization: Bearer <SKYLAB_API_TOKEN>".
 #
@@ -59,10 +60,10 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse({"status": "ok"})
 
 
-async def publicar_ahora(sesiones_db: sessionmaker):
+async def publicar_ahora(sesiones_db: sessionmaker, forzar: bool = False):
     """Abre la sesión MCP con garmin-mcp y publica la próxima semana."""
     async with ClienteGarmin() as cliente:
-        return await publicar_semana(sesiones_db, cliente)
+        return await publicar_semana(sesiones_db, cliente, forzar=forzar)
 
 
 async def _ejecutar(request: Request, operacion, nombre: str) -> JSONResponse:
@@ -84,7 +85,12 @@ async def sync(request: Request) -> JSONResponse:
 
 
 async def publicar(request: Request) -> JSONResponse:
-    return await _ejecutar(request, request.app.state.publicar, "la publicación en Garmin")
+    forzar = request.query_params.get("forzar", "").lower() in ("1", "true", "si", "sí")
+
+    async def operacion(sesiones_db):
+        return await request.app.state.publicar(sesiones_db, forzar=forzar)
+
+    return await _ejecutar(request, operacion, "la publicación en Garmin")
 
 
 def crear_app(sincronizar=sincronizar_ahora, publicar_semana=publicar_ahora, fabrica_sesiones=sesiones_db) -> Starlette:

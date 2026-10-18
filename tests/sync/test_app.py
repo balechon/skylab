@@ -70,7 +70,7 @@ def test_el_grupo_de_excepciones_de_mcp_devuelve_502_con_la_causa_real():
     assert respuesta.json()["error"] == "ConnectionError: Temporary failure in name resolution"
 
 
-async def _sin_plan(_db):
+async def _sin_plan(_db, forzar=False):
     from sync.publicacion import NadaQuePublicar
 
     raise NadaQuePublicar("No hay un plan activo que publicar.")
@@ -85,3 +85,18 @@ def test_publicar_sin_plan_devuelve_409():
 
 def test_publicar_exige_token():
     assert _cliente().post("/publicar").status_code == 401
+
+
+
+def test_publicar_pasa_forzar():
+    recibido = {}
+
+    async def publicar_falso(_db, forzar=False):
+        recibido["forzar"] = forzar
+        raise NadaQuePublicar("x")
+
+    cliente = TestClient(crear_app(sincronizar=_sincroniza_bien, publicar_semana=publicar_falso, fabrica_sesiones=lambda: None))
+    cliente.post("/publicar", headers=CABECERA)
+    assert recibido["forzar"] is False
+    cliente.post("/publicar?forzar=true", headers=CABECERA)
+    assert recibido["forzar"] is True

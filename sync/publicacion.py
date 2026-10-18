@@ -54,8 +54,12 @@ def _proxima_semana(plan: Plan, hoy: date) -> Optional[Microciclo]:
 
 
 async def publicar_semana(
-    sesiones_db: sessionmaker, cliente: ClienteGarmin, hoy: Optional[date] = None
+    sesiones_db: sessionmaker, cliente: ClienteGarmin, hoy: Optional[date] = None, forzar: bool = False
 ) -> ResultadoPublicacion:
+    """Publica la próxima semana del plan vigente. Si esa versión ya está
+    publicada no hace nada, salvo `forzar`: entonces retira lo publicado y lo
+    vuelve a subir (p. ej. tras cambiar cómo se nombran los entrenamientos, o
+    si el reloj quedó desincronizado)."""
     hoy = hoy or date.today()
     with sesiones_db() as db:
         vigente = repo.plan_vigente(db)
@@ -75,7 +79,7 @@ async def publicar_semana(
         previas = [p for p in repo.publicaciones_activas(db, hoy, semana.fecha_fin)]
 
     ya_publicadas = {p.fecha for p in previas if (p.plan_id, p.version) == (plan_id, plan.version)}
-    if previas and len(ya_publicadas) == len(previas) and ya_publicadas >= {s.fecha for s in sesiones}:
+    if not forzar and previas and len(ya_publicadas) == len(previas) and ya_publicadas >= {s.fecha for s in sesiones}:
         resultado.sin_cambios = True
         return resultado
 

@@ -1,6 +1,7 @@
 # Uso manual dentro del contenedor:
 #   docker compose exec skylab-sync python -m sync            # Garmin → Postgres
 #   docker compose exec skylab-sync python -m sync publicar   # próxima semana → reloj
+#   docker compose exec skylab-sync python -m sync publicar --forzar   # volver a subirla
 #   docker compose exec skylab-sync python -m sync rellenar-zonas 2026-08-01
 #       # rellena los límites de zona de las actividades ya guardadas
 
@@ -22,8 +23,8 @@ async def _rellenar(desde: date) -> int:
 
 if sys.argv[1:2] == ["rellenar-zonas"] and len(sys.argv) == 3:
     print(f"Límites de zona completados: {asyncio.run(_rellenar(date.fromisoformat(sys.argv[2])))} actividades.")
-elif sys.argv[1:] == ["publicar"]:
-    r = asyncio.run(publicar_ahora(sesiones_db))
+elif sys.argv[1:2] == ["publicar"]:
+    r = asyncio.run(publicar_ahora(sesiones_db, forzar="--forzar" in sys.argv[2:]))
     if r.sin_cambios:
         print(f"Plan {r.plan_id} v{r.version}: la semana del {r.semana} ya estaba publicada.")
     else:

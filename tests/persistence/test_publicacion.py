@@ -116,3 +116,20 @@ def test_lo_borrado_a_mano_en_garmin_no_bloquea_la_publicacion(sesiones_db):
     r = asyncio.run(publicar_semana(sesiones_db, garmin, hoy=HOY))
     assert r.retirados == 3 and len(r.publicados) == 3
     assert len(r.avisos) == 1 and "not found" in r.avisos[0]
+
+
+
+def test_forzar_vuelve_a_subir_la_misma_version(sesiones_db):
+    _crear_plan(sesiones_db, plan_valido())
+    garmin = GarminFalso()
+    primera = asyncio.run(publicar_semana(sesiones_db, garmin, hoy=HOY))
+
+    garmin.llamadas.clear()
+    r = asyncio.run(publicar_semana(sesiones_db, garmin, hoy=HOY, forzar=True))
+
+    assert not r.sin_cambios and r.retirados == 3 and len(r.publicados) == 3
+    borrados = [ll[1] for ll in garmin.llamadas if ll[0] == "borrar"]
+    assert borrados == [p.garmin_workout_id for p in primera.publicados]
+    with sesiones_db() as db:
+        activas = repo.publicaciones_activas(db, HOY, HOY.replace(day=31))
+    assert {p.garmin_workout_id for p in activas} == {p.garmin_workout_id for p in r.publicados}
