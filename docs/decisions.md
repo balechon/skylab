@@ -665,3 +665,24 @@ la regla de no exponer nada) y se entregan "como mucho una vez", así que la
 consulta periódica haría falta igual. La conexión interna limita el acceso a
 lo que se comparte con ella, no caduca y sus escrituras son del bot, no del
 atleta. Que el servicio no toque la base mantiene Notion sustituible.
+
+## 2026-10-18 — Pipeline medallón y monitor en Notion
+
+**Decisión**: capas en la misma base, con prefijo (los tests usan un esquema
+temporal por ejecución): `bronze_garmin_actividad` guarda lo que devuelve
+Garmin tal cual (resumen, detalle y zonas); `silver_*` y `gold_*` son vistas
+SQL (migración 0007): sesiones con minutos por zona y semana, ejecuciones con
+coste y velocidad, semanas del plan vigente desde su JSON, carga semanal,
+adherencia (plan frente a hecho) y coste del agente total y por mes. Los
+precios por modelo son datos (`precio_modelo`), no código. Cada ejecución
+guarda ahora tokens de caché (lectura y escritura) y duración. `GET /monitor`
+expone la capa gold y el servicio de Notion la vuelca en una página Monitor
+(Resumen con el estado del servicio, Ejecuciones del agente y Carga semanal,
+con gráficos).
+
+**Por qué**: vistas en vez de procesos: siempre al día y sin nada que
+mantener ni programar. Con bronze se puede rehacer silver si cambia cómo se
+interpreta una actividad. El coste real depende de la caché (lectura a 0,20
+USD/MTok frente a 4 USD/MTok de entrada en Opus 5.5), así que sin esos tokens
+el coste se sobrestima: la ejecución del plan 4 (anterior a este cambio) se
+calcula como si no hubiera usado caché.

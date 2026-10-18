@@ -107,6 +107,9 @@ class EjecucionAgenteFila(Base):
     modelo: Mapped[Optional[str]] = mapped_column(String(60))
     tokens_entrada: Mapped[Optional[int]] = mapped_column(Integer)
     tokens_salida: Mapped[Optional[int]] = mapped_column(Integer)
+    tokens_cache_lectura: Mapped[Optional[int]] = mapped_column(Integer)
+    tokens_cache_escritura: Mapped[Optional[int]] = mapped_column(Integer)
+    duracion_segundos: Mapped[Optional[float]] = mapped_column(Float)
     resultado: Mapped[dict[str, Any]] = mapped_column(JSONB)
 
 
@@ -136,3 +139,39 @@ class FichaAtletaFila(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     creado_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     contenido: Mapped[dict[str, Any]] = mapped_column(JSONB)
+
+
+
+# ---------- pipeline medallón (bronze → silver → gold) ----------
+# bronze_*: los datos tal cual llegan; silver_* y gold_* son vistas SQL
+# (migración 0007), así que no tienen modelo aquí.
+
+
+class BronzeGarminActividadFila(Base):
+    """Una actividad de Garmin tal como la devolvió garmin-mcp: resumen,
+    detalle y tiempo por zona, sin transformar. Permite rehacer la capa
+    silver si cambia cómo se interpreta una actividad."""
+
+    __tablename__ = "bronze_garmin_actividad"
+
+    garmin_activity_id: Mapped[int] = mapped_column(BigInteger, primary_key=True)
+    fecha: Mapped[date] = mapped_column(Date, index=True)
+    recibido_en: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    resumen: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    detalle: Mapped[dict[str, Any]] = mapped_column(JSONB)
+    zonas: Mapped[list[Any]] = mapped_column(JSONB)
+
+
+class PrecioModeloFila(Base):
+    """Precio por millón de tokens de cada modelo, para calcular el coste de
+    las ejecuciones. Es un dato, no código: se actualiza sin desplegar."""
+
+    __tablename__ = "precio_modelo"
+
+    modelo: Mapped[str] = mapped_column(String(80), primary_key=True)
+    entrada: Mapped[float] = mapped_column(Float)
+    salida: Mapped[float] = mapped_column(Float)
+    cache_lectura: Mapped[float] = mapped_column(Float)
+    cache_escritura: Mapped[float] = mapped_column(Float)
+    fuente: Mapped[str] = mapped_column(Text)
+    actualizado: Mapped[date] = mapped_column(Date)

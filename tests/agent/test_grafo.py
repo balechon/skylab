@@ -220,3 +220,14 @@ def test_obtener_atleta_devuelve_la_ficha_o_avisa_si_no_hay():
     ficha = FichaAtleta(edad=31, categoria="1", umbrales=Umbrales(fc_aerobico=149))
     salida = json.loads(Herramientas(contexto_ciclo(atleta=ficha)).ejecutar("obtener_atleta", {}).contenido)
     assert (salida["edad"], salida["categoria"], salida["umbrales"]["fc_aerobico"]) == (31, "1", 149)
+
+
+def test_guarda_los_tokens_de_cache_y_la_duracion():
+    respuesta = _respuesta(_tool("entregar_resultado", "t1", resultado_json=RESULTADO_OK))
+    respuesta.usage_metadata = {
+        "input_tokens": 1500, "output_tokens": 200, "total_tokens": 1700,
+        "input_token_details": {"cache_read": 1000, "cache_creation": 300},
+    }
+    ejecucion = ejecutar_agente(contexto_ciclo(), ModeloFalso(respuestas=[respuesta]))
+    assert (ejecucion.tokens_cache_lectura, ejecucion.tokens_cache_escritura) == (1000, 300)
+    assert ejecucion.duracion_segundos >= 0

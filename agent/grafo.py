@@ -11,6 +11,7 @@
 # no sabe de qué proveedor es. En los tests se usa uno falso, sin red.
 
 import operator
+import time
 from typing import Annotated, Any, Optional, TypedDict
 
 from langchain_core.language_models import BaseChatModel
@@ -41,8 +42,11 @@ class EjecucionAgente(BaseModel):
     iteraciones: int = 0
     entregas_rechazadas: int = 0
     modelo: str = ""
-    tokens_entrada: int = 0
+    tokens_entrada: int = 0  # todos los de entrada, incluidos los de caché
     tokens_salida: int = 0
+    tokens_cache_lectura: int = 0
+    tokens_cache_escritura: int = 0
+    duracion_segundos: float = 0.0
 
 
 class EstadoGrafo(TypedDict):
@@ -51,6 +55,8 @@ class EstadoGrafo(TypedDict):
     recordatorios: Annotated[int, operator.add]
     tokens_entrada: Annotated[int, operator.add]
     tokens_salida: Annotated[int, operator.add]
+    tokens_cache_lectura: Annotated[int, operator.add]
+    tokens_cache_escritura: Annotated[int, operator.add]
     fin: Optional[str]
     detalle: str
 
@@ -70,6 +76,7 @@ def construir_grafo(ctx: ContextoAgente, modelo: BaseChatModel, nombre: str, max
     def llamar_modelo(estado: EstadoGrafo) -> dict[str, Any]:
         respuesta = modelo_con_tools.invoke([sistema, *estado["messages"]])
         uso = respuesta.usage_metadata or {}
+        cache = uso.get("input_token_details") or {}
         cambios: dict[str, Any] = {
             # La respuesta se añade tal cual (con sus bloques de razonamiento):
             # el historial solo crece, nunca se edita.
@@ -77,6 +84,8 @@ def construir_grafo(ctx: ContextoAgente, modelo: BaseChatModel, nombre: str, max
             "iteraciones": 1,
             "tokens_entrada": uso.get("input_tokens", 0),  # incluye lectura y escritura de caché
             "tokens_salida": uso.get("output_tokens", 0),
+            "tokens_cache_lectura": cache.get("cache_read") or 0,
+            "tokens_cache_escritura": cache.get("cache_creation") or 0,
         }
         motivo = _motivo_parada(respuesta)
         if motivo in _RECHAZO:
@@ -139,6 +148,7 @@ def ejecutar_agente(
     proveedor; en los tests, uno falso)."""
     nombre = nombre or nombre_modelo()
     grafo, herramientas = construir_grafo(ctx, modelo, nombre, max_iteraciones)
+    inicio = time.monotonic()
     final = grafo.invoke(
         {
             "messages": [HumanMessage(primer_mensaje(ctx))],
@@ -146,6 +156,8 @@ def ejecutar_agente(
             "recordatorios": 0,
             "tokens_entrada": 0,
             "tokens_salida": 0,
+            "tokens_cache_lectura": 0,
+            "tokens_cache_escritura": 0,
             "fin": None,
             "detalle": "",
         },
@@ -160,6 +172,9 @@ def ejecutar_agente(
         modelo=nombre,
         tokens_entrada=final["tokens_entrada"],
         tokens_salida=final["tokens_salida"],
+        tokens_cache_lectura=final["tokens_cache_lectura"],
+        tokens_cache_escritura=final["tokens_cache_escritura"],
+        duracion_segundos=round(time.monotonic() - inicio, 1),
     )
     if herramientas.resultado_aceptado is not None:
         ejecucion.resultado = herramientas.resultado_aceptado

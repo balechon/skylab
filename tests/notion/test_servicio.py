@@ -195,3 +195,32 @@ def test_garmin_se_sincroniza_cada_diez_ciclos():
     for _ in range(11):
         _ciclo(servicio)
     assert skylab.nombres().count("sincronizar") == 2
+
+
+
+# ---------- monitor ----------
+
+def test_vuelca_el_monitor_sin_duplicar():
+    from datetime import datetime, timezone
+
+    notion, skylab = NotionFalso(), SkylabFalso()
+    skylab.gold = {
+        "resumen": {"ejecuciones": 1, "aceptadas": 1, "coste_total_usd": 0.6566, "tokens_entrada": 78959,
+                    "ultima_ejecucion": "2026-10-18T13:45:36.850601-05:00"},
+        "ejecuciones": [{"id": 4, "operacion": "crear_ciclo", "estado": "plan_valido", "aceptada": True,
+                         "creado_en": "2026-10-18T13:45:36.850601-05:00", "coste_usd": 0.6566}],
+        "semanas": [{"semana": "2026-10-19", "tipo": "Base", "horas_objetivo": 3.58, "horas_hechas": 0}],
+        "por_mes": [],
+    }
+    instante = datetime(2026, 10, 18, 16, 0, tzinfo=timezone.utc)
+    servicio = ServicioNotion(notion, skylab, ATLETA, SEMANAS, ENTRENAMIENTOS, hoy=lambda: HOY,
+                              ds_resumen="r", ds_ejecuciones="e", ds_carga="c", ahora=lambda: instante)
+    _ciclo(servicio)
+    assert p.leer(notion.fila("e", "4"), "Coste (USD)") == 0.6566
+    assert p.leer(notion.fila("c", "2026-10-19"), "Semana") == "19–25 oct"
+    total = notion.fila("r", "total")
+    assert p.leer(total, "Ejecuciones") == 1 and p.leer(total, "Último ciclo del servicio") == instante
+
+    notion.creadas.clear()
+    _ciclo(servicio)
+    assert notion.creadas == []  # todo se actualiza en su fila

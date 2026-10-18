@@ -11,7 +11,7 @@ from typing import Optional
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
 
-from sync.garmin import ClienteGarmin, traer_sesiones
+from sync.garmin import ActividadCruda, ClienteGarmin, traer_sesiones
 from persistence import repository as repo
 
 DIAS_INICIALES = 56
@@ -43,9 +43,11 @@ async def sincronizar(
         ultima = repo.ultima_fecha_sincronizada(db)
     desde = ultima or hoy - timedelta(days=DIAS_INICIALES)
 
-    sesiones = await traer_sesiones(cliente, desde, hoy, rpe_desde)
+    crudas: list[ActividadCruda] = []
+    sesiones = await traer_sesiones(cliente, desde, hoy, rpe_desde, crudas)
 
     with sesiones_db.begin() as db:
+        repo.guardar_bronze(db, [c.model_dump() for c in crudas])
         nuevas = repo.guardar_sesiones(db, sesiones)
         repo.completar_limites_zonas(db, sesiones)
     return ResultadoSync(desde=desde, hasta=hoy, traidas=len(sesiones), nuevas=nuevas)
@@ -54,8 +56,10 @@ async def sincronizar(
 async def rellenar_limites_zonas(sesiones_db: sessionmaker, cliente: ClienteGarmin, desde: date, hasta: date) -> int:
     """Vuelve a leer de Garmin las actividades entre dos fechas y rellena los
     límites de zona de las ya guardadas que no los tienen."""
-    sesiones = await traer_sesiones(cliente, desde, hasta)
+    crudas: list[ActividadCruda] = []
+    sesiones = await traer_sesiones(cliente, desde, hasta, crudas=crudas)
     with sesiones_db.begin() as db:
+        repo.guardar_bronze(db, [c.model_dump() for c in crudas])
         return repo.completar_limites_zonas(db, sesiones)
 
 

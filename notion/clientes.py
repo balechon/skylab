@@ -115,6 +115,9 @@ class ClienteSkylab:
     async def sesiones(self, desde: date, hasta: date) -> RespuestaSkylab:
         return await self._pedir("GET", f"{self._api}/sesiones", params={"desde": desde.isoformat(), "hasta": hasta.isoformat()})
 
+    async def monitor(self) -> RespuestaSkylab:
+        return await self._pedir("GET", f"{self._api}/monitor")
+
     async def ajustar(self, comentarios: Optional[dict[str, Any]], forzar: bool) -> RespuestaSkylab:
         return await self._pedir(
             "POST",
@@ -147,6 +150,9 @@ class SkylabEnSimulacion:
 
     async def sesiones(self, desde: date, hasta: date) -> RespuestaSkylab:
         return await self._real.sesiones(desde, hasta)
+
+    async def monitor(self) -> RespuestaSkylab:
+        return await self._real.monitor()
 
     async def guardar_atleta(self, ficha: dict[str, Any]) -> RespuestaSkylab:
         return self._registrar("guardar la ficha del atleta")

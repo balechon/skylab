@@ -22,6 +22,10 @@ class Config:
     token_archivo: Path
     intervalo_segundos: int = 180
     simulacion: bool = False
+    # Página Monitor (opcional): sin estos ids no se vuelca el monitor.
+    ds_resumen: str = ""
+    ds_ejecuciones: str = ""
+    ds_carga: str = ""
 
 
 def _requerida(nombre: str) -> str:
@@ -42,6 +46,9 @@ def desde_entorno() -> Config:
         token_archivo=Path(os.environ.get("NOTION_TOKEN_FILE", "/run/secrets/notion_token")),
         intervalo_segundos=int(os.environ.get("NOTION_INTERVALO_SEGUNDOS", "180")),
         simulacion=os.environ.get("NOTION_SIMULACION", "").lower() in ("1", "true", "si", "sí"),
+        ds_resumen=os.environ.get("NOTION_DS_RESUMEN", "").strip(),
+        ds_ejecuciones=os.environ.get("NOTION_DS_EJECUCIONES", "").strip(),
+        ds_carga=os.environ.get("NOTION_DS_CARGA", "").strip(),
     )
 
 

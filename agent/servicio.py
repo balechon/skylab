@@ -137,6 +137,9 @@ def crear_ciclo(
             modelo=ejecucion.modelo,
             tokens_entrada=ejecucion.tokens_entrada,
             tokens_salida=ejecucion.tokens_salida,
+            tokens_cache_lectura=ejecucion.tokens_cache_lectura,
+            tokens_cache_escritura=ejecucion.tokens_cache_escritura,
+            duracion_segundos=ejecucion.duracion_segundos,
         )
     return respuesta
 
@@ -212,6 +215,9 @@ def ajuste_semanal(
             modelo=ejecucion.modelo,
             tokens_entrada=ejecucion.tokens_entrada,
             tokens_salida=ejecucion.tokens_salida,
+            tokens_cache_lectura=ejecucion.tokens_cache_lectura,
+            tokens_cache_escritura=ejecucion.tokens_cache_escritura,
+            duracion_segundos=ejecucion.duracion_segundos,
             semana=semana,
         )
     return respuesta

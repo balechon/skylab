@@ -5,6 +5,7 @@
 #   POST /plan              crear un ciclo nuevo
 #   GET  /plan              plan vigente (id, versión, perfil y el plan completo)
 #   GET  /sesiones          sesiones realizadas entre ?desde y ?hasta
+#   GET  /monitor           capa gold: coste y rendimiento del agente, carga semanal
 #   GET  /atleta            ficha vigente del atleta
 #   PUT  /atleta            guarda una versión nueva de la ficha
 #   POST /semana/ajustar    ajuste semanal del plan vigente; cuerpo opcional con
@@ -25,6 +26,7 @@ from functools import lru_cache
 from typing import Any, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException
+from fastapi.encoders import jsonable_encoder
 from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
@@ -178,3 +180,10 @@ def obtener_sesiones(
         raise HTTPException(status_code=422, detail="hasta debe ser posterior o igual a desde")
     with sesiones_db() as db:
         return repo.sesiones_entre(db, desde, hasta)
+
+
+
+@app.get("/monitor", dependencies=[Depends(exigir_token)])
+def obtener_monitor(sesiones_db: sessionmaker = Depends(obtener_sesiones_db)) -> dict[str, Any]:
+    with sesiones_db() as db:
+        return jsonable_encoder(repo.monitor(db))

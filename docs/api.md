@@ -26,6 +26,8 @@ servicios responden 503.
   siguiente del plan vigente. 409 si no hay plan activo, o si esa semana ya
   se ajustó (no se vuelve a llamar al modelo; `?forzar=true` para rehacerla,
   como mucho 2 veces por semana: cada recálculo es una llamada al modelo).
+- `GET /monitor` → capa gold: `{resumen, por_mes, ejecuciones, semanas}` (coste y
+  rendimiento del agente, carga y adherencia semanal).
 - `GET /plan` → plan vigente: `{plan_id, version, perfil, plan}`. 404 si no hay.
 - `GET /sesiones?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` → sesiones realizadas
   (de Garmin) en ese rango.

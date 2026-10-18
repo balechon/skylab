@@ -25,7 +25,10 @@ def crear_servicio(simulacion: bool) -> ServicioNotion:
     if simulacion or cfg.simulacion:
         log.info("Modo simulación: no se escribe en Notion ni se llama al modelo.")
         notion, skylab = NotionEnSimulacion(notion), SkylabEnSimulacion(skylab)
-    return ServicioNotion(notion, skylab, cfg.ds_atleta, cfg.ds_semanas, cfg.ds_entrenamientos)
+    return ServicioNotion(
+        notion, skylab, cfg.ds_atleta, cfg.ds_semanas, cfg.ds_entrenamientos,
+        ds_resumen=cfg.ds_resumen, ds_ejecuciones=cfg.ds_ejecuciones, ds_carga=cfg.ds_carga,
+    )
 
 
 async def un_ciclo(servicio: ServicioNotion) -> None:

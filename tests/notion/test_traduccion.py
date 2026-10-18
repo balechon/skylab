@@ -40,7 +40,11 @@ def test_propiedades_se_leen_igual_escritas_que_devueltas_por_la_api():
     de_la_api = {"type": "rich_text", "rich_text": [{"plain_text": "Hola", "text": {"content": "Hola"}}]}
     assert p.valor(escrita) == p.valor(de_la_api) == "Hola"
     assert p.valor(p.fecha(date(2026, 10, 19))) == date(2026, 10, 19)
-    assert p.valor({"type": "date", "date": {"start": "2026-10-19T00:00:00.000+00:00"}}) == date(2026, 10, 19)
+    assert p.valor({"type": "date", "date": {"start": "2026-10-19"}}) == date(2026, 10, 19)
+    # Con hora, Notion devuelve milisegundos: se compara el instante, no el texto.
+    from datetime import datetime, timezone
+    assert p.valor({"type": "date", "date": {"start": "2026-10-18T20:00:00.000+00:00"}}) == datetime(2026, 10, 18, 20, tzinfo=timezone.utc)
+    assert p.valor(p.fecha_hora(datetime(2026, 10, 18, 20, tzinfo=timezone.utc))) == datetime(2026, 10, 18, 20, tzinfo=timezone.utc)
     assert p.valor(p.relacion(["3fdb5534-22ec"])) == ["3fdb553422ec"]
     assert p.valor(p.seleccion(None)) is None and p.valor(p.texto(None)) is None
 

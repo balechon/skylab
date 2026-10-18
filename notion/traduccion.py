@@ -7,7 +7,7 @@
 # en cada versión del plan y nunca se duplica. Las columnas del atleta
 # (Observaciones, Comentario, Evaluar, Recalcular) nunca se sobrescriben.
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Optional
 
 from core.athlete import FichaAtleta
@@ -258,3 +258,76 @@ def comentarios_para_ajuste(
     if not por_sesion and not general:
         return None
     return {"general": general[:1000] if general else None, "por_sesion": sorted(por_sesion, key=lambda c: c["fecha"])}
+
+
+
+# ---------- monitor (capa gold) ----------
+
+
+def rango_semana(inicio: date) -> str:
+    fin = inicio + timedelta(days=6)
+    if inicio.month == fin.month:
+        return f"{inicio.day}–{fin.day} {_MESES[fin.month - 1]}"
+    return f"{inicio.day} {_MESES[inicio.month - 1]}–{fin.day} {_MESES[fin.month - 1]}"
+
+
+def _momento(texto: Optional[str]) -> Optional[datetime]:
+    return datetime.fromisoformat(texto) if texto else None
+
+
+def propiedades_resumen(resumen: dict[str, Any], ultimo_ciclo: datetime, avisos: list[str]) -> dict[str, Any]:
+    return {
+        "Nombre": p.titulo("Agente y servicio"),
+        "Clave": p.texto("total"),
+        "Coste total (USD)": p.numero(resumen.get("coste_total_usd")),
+        "Coste medio por ejecución (USD)": p.numero(resumen.get("coste_medio_usd")),
+        "Ejecuciones": p.numero(resumen.get("ejecuciones")),
+        "Aceptadas": p.numero(resumen.get("aceptadas")),
+        "Tokens de entrada": p.numero(resumen.get("tokens_entrada")),
+        "Tokens de salida": p.numero(resumen.get("tokens_salida")),
+        "Tokens leídos de caché": p.numero(resumen.get("tokens_cache_lectura")),
+        "Duración media (s)": p.numero(resumen.get("duracion_media_segundos")),
+        "Tokens de salida por segundo": p.numero(resumen.get("tokens_salida_por_segundo")),
+        "Última ejecución": p.fecha_hora(_momento(resumen.get("ultima_ejecucion"))),
+        "Último ciclo del servicio": p.fecha_hora(ultimo_ciclo),
+        "Avisos del servicio": p.texto("\n".join(avisos) if avisos else "Sin avisos."),
+    }
+
+
+def propiedades_ejecucion(e: dict[str, Any]) -> dict[str, Any]:
+    return {
+        "Ejecución": p.titulo(f"#{e['id']} · {e['operacion']}"),
+        "Clave": p.texto(str(e["id"])),
+        "Fecha": p.fecha_hora(_momento(e.get("creado_en"))),
+        "Operación": p.seleccion(e.get("operacion")),
+        "Estado": p.seleccion(e.get("estado")),
+        "Aceptada": p.casilla(bool(e.get("aceptada"))),
+        "Modelo": p.texto(e.get("modelo")),
+        "Tokens de entrada": p.numero(e.get("tokens_entrada")),
+        "Tokens de salida": p.numero(e.get("tokens_salida")),
+        "Tokens leídos de caché": p.numero(e.get("tokens_cache_lectura")),
+        "Duración (s)": p.numero(e.get("duracion_segundos")),
+        "Tokens de salida por segundo": p.numero(e.get("tokens_salida_por_segundo")),
+        "Coste (USD)": p.numero(e.get("coste_usd")),
+    }
+
+
+def propiedades_carga(s: dict[str, Any]) -> dict[str, Any]:
+    inicio = date.fromisoformat(s["semana"])
+    return {
+        "Semana": p.titulo(rango_semana(inicio)),
+        "Clave": p.texto(inicio.isoformat()),
+        "Inicio": p.fecha(inicio),
+        "Tipo": p.seleccion(s.get("tipo")),
+        "Horas plan": p.numero(s.get("horas_objetivo")),
+        "Horas hechas": p.numero(s.get("horas_hechas")),
+        "Adherencia (%)": p.numero(s.get("adherencia_horas_pct")),
+        "Km plan": p.numero(s.get("km_objetivo")),
+        "Km hechos": p.numero(s.get("km_hechos")),
+        "D+ plan (m)": p.numero(s.get("dmas_objetivo")),
+        "D+ hecho (m)": p.numero(s.get("dmas_hecho")),
+        "Sesiones hechas": p.numero(s.get("sesiones")),
+        "Carga EPOC": p.numero(s.get("carga_epoc")),
+        "RPE medio": p.numero(s.get("rpe_medio")),
+        "FC media": p.numero(s.get("fc_media")),
+    }

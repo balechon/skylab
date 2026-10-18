@@ -14,13 +14,14 @@ from enum import Enum
 from typing import Any, Optional
 
 from pydantic import BaseModel
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from core.athlete import FichaAtleta
 from core.training import Plan, SesionRealizada
 from persistence.models import (
+    BronzeGarminActividadFila,
     EjecucionAgenteFila,
     FichaAtletaFila,
     PublicacionGarminFila,
@@ -169,8 +170,14 @@ def registrar_ejecucion(
     tokens_entrada: Optional[int] = None,
     tokens_salida: Optional[int] = None,
     semana: Optional[date] = None,
+    tokens_cache_lectura: Optional[int] = None,
+    tokens_cache_escritura: Optional[int] = None,
+    duracion_segundos: Optional[float] = None,
 ) -> int:
     fila = EjecucionAgenteFila(
+        tokens_cache_lectura=tokens_cache_lectura,
+        tokens_cache_escritura=tokens_cache_escritura,
+        duracion_segundos=duracion_segundos,
         operacion=operacion,
         semana=semana,
         estado=estado,
@@ -282,3 +289,44 @@ def guardar_ficha(db: Session, ficha: FichaAtleta) -> int:
 def ficha_vigente(db: Session) -> Optional[FichaAtleta]:
     contenido = db.scalar(select(FichaAtletaFila.contenido).order_by(FichaAtletaFila.id.desc()).limit(1))
     return FichaAtleta.model_validate(contenido) if contenido is not None else None
+
+
+
+# ---------- pipeline medallón ----------
+
+def guardar_bronze(db: Session, actividades: list[dict[str, Any]]) -> int:
+    """Guarda (o reemplaza) las actividades crudas de Garmin en bronze."""
+    if not actividades:
+        return 0
+    sentencia = insert(BronzeGarminActividadFila).values(actividades)
+    sentencia = sentencia.on_conflict_do_update(
+        index_elements=["garmin_activity_id"],
+        set_={
+            "resumen": sentencia.excluded.resumen,
+            "detalle": sentencia.excluded.detalle,
+            "zonas": sentencia.excluded.zonas,
+            "recibido_en": func.now(),
+        },
+    )
+    return len(db.execute(sentencia.returning(BronzeGarminActividadFila.garmin_activity_id)).all())
+
+
+def _filas(db: Session, consulta: str, **parametros: Any) -> list[dict[str, Any]]:
+    return [dict(f._mapping) for f in db.execute(text(consulta), parametros)]
+
+
+def monitor(db: Session, ultimas_ejecuciones: int = 50) -> dict[str, Any]:
+    """La capa gold para el monitor: coste y rendimiento del agente, y la
+    carga semanal del plan vigente frente a lo hecho."""
+    return {
+        "resumen": _filas(db, "SELECT * FROM gold_agente_resumen")[0],
+        "por_mes": _filas(db, "SELECT * FROM gold_agente_por_mes ORDER BY mes, operacion"),
+        "ejecuciones": _filas(
+            db,
+            "SELECT id, creado_en, operacion, estado, semana, modelo, aceptada, tokens_entrada, tokens_salida, "
+            "tokens_cache_lectura, tokens_cache_escritura, duracion_segundos, coste_usd, tokens_salida_por_segundo "
+            "FROM silver_ejecucion ORDER BY id DESC LIMIT :n",
+            n=ultimas_ejecuciones,
+        ),
+        "semanas": _filas(db, "SELECT * FROM gold_adherencia_semanal ORDER BY semana"),
+    }

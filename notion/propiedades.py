@@ -3,7 +3,7 @@
 # formatos, así se puede comparar lo que hay con lo que se quiere escribir y
 # no tocar Notion si no cambia nada.
 
-from datetime import date
+from datetime import date, datetime
 from typing import Any, Optional
 
 _MAX_TEXTO = 2000  # caracteres por fragmento de texto en la API de Notion
@@ -37,6 +37,10 @@ def fecha(dia: Optional[date]) -> dict[str, Any]:
     return {"date": {"start": dia.isoformat()} if dia else None}
 
 
+def fecha_hora(momento: Optional[datetime]) -> dict[str, Any]:
+    return {"date": {"start": momento.isoformat()} if momento else None}
+
+
 def casilla(marcada: bool) -> dict[str, Any]:
     return {"checkbox": marcada}
 
@@ -66,7 +70,10 @@ def valor(propiedad: Optional[dict[str, Any]]) -> Any:
         return [o["name"] for o in propiedad["multi_select"]]
     if "date" in propiedad:
         inicio = (propiedad["date"] or {}).get("start")
-        return date.fromisoformat(inicio[:10]) if inicio else None
+        if not inicio:
+            return None
+        # Con hora, se compara el instante (Notion la devuelve con milisegundos).
+        return datetime.fromisoformat(inicio) if len(inicio) > 10 else date.fromisoformat(inicio)
     if "checkbox" in propiedad:
         return bool(propiedad["checkbox"])
     if "relation" in propiedad:

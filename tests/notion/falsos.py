@@ -53,6 +53,7 @@ class SkylabFalso:
         self.sesiones_actuales = sesiones or []
         self.atleta_actual = atleta
         self.respuesta_ajuste = RespuestaSkylab(200, {"estado": "plan_valido", "version": 2, "feedback": None})
+        self.gold = {"resumen": {"ejecuciones": 0}, "ejecuciones": [], "semanas": [], "por_mes": []}
         self.llamadas: list[tuple[str, Any]] = []
 
     async def atleta(self) -> RespuestaSkylab:
@@ -68,6 +69,9 @@ class SkylabFalso:
 
     async def sesiones(self, desde: date, hasta: date) -> RespuestaSkylab:
         return RespuestaSkylab(200, [s for s in self.sesiones_actuales if desde.isoformat() <= s["fecha"] <= hasta.isoformat()])
+
+    async def monitor(self) -> RespuestaSkylab:
+        return RespuestaSkylab(200, self.gold)
 
     async def ajustar(self, comentarios: Optional[dict[str, Any]], forzar: bool) -> RespuestaSkylab:
         self.llamadas.append(("ajustar", {"comentarios": comentarios, "forzar": forzar}))

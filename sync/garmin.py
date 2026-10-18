@@ -19,6 +19,8 @@ from typing import Any, Optional
 from mcp import ClientSession
 from mcp.client.streamable_http import streamable_http_client
 
+from pydantic import BaseModel
+
 from core.training import SesionRealizada, Terreno, ZonasFC
 
 TOOLS_PERMITIDAS = frozenset(
@@ -84,6 +86,16 @@ def _limites_zonas(zonas: list[dict[str, Any]]) -> list[int]:
     if any(suelos.get(n) is None for n in range(1, 6)):
         return []
     return [int(suelos[n]) for n in range(1, 6)]
+
+
+class ActividadCruda(BaseModel):
+    """Una actividad tal como la devolvió Garmin (capa bronze)."""
+
+    garmin_activity_id: int
+    fecha: date
+    resumen: dict[str, Any]
+    detalle: dict[str, Any]
+    zonas: list[Any]
 
 
 def actividad_a_sesion(
@@ -219,10 +231,15 @@ def _interpretar(tool: str, texto: str) -> Any:
 
 
 async def traer_sesiones(
-    cliente: ClienteGarmin, desde: date, hasta: date, rpe_desde: Optional[date] = None
+    cliente: ClienteGarmin,
+    desde: date,
+    hasta: date,
+    rpe_desde: Optional[date] = None,
+    crudas: Optional[list[ActividadCruda]] = None,
 ) -> list[SesionRealizada]:
     """Actividades de running entre dos fechas, ya convertidas. Pide el
-    detalle y las zonas solo de las actividades de running."""
+    detalle y las zonas solo de las actividades de running. Si se pasa
+    `crudas`, añade ahí lo que devolvió Garmin tal cual (capa bronze)."""
     sesiones = []
     for resumen in await cliente.actividades_entre(desde, hasta):
         if resumen.get("type") not in TERRENO_POR_TIPO:
@@ -232,4 +249,7 @@ async def traer_sesiones(
         sesion = actividad_a_sesion(resumen, detalle, zonas, rpe_desde)
         if sesion is not None:
             sesiones.append(sesion)
+            if crudas is not None:
+                crudas.append(ActividadCruda(garmin_activity_id=sesion.garmin_activity_id, fecha=sesion.fecha,
+                                             resumen=resumen, detalle=detalle, zonas=zonas))
     return sesiones

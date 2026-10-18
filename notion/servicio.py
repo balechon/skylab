@@ -14,7 +14,7 @@
 
 import logging
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from typing import Any, Callable, Optional, Protocol
 
 from pydantic import ValidationError
@@ -39,6 +39,7 @@ class Skylab(Protocol):
     async def guardar_atleta(self, ficha: dict[str, Any]) -> RespuestaSkylab: ...
     async def plan(self) -> RespuestaSkylab: ...
     async def sesiones(self, desde: date, hasta: date) -> RespuestaSkylab: ...
+    async def monitor(self) -> RespuestaSkylab: ...
     async def ajustar(self, comentarios: Optional[dict[str, Any]], forzar: bool) -> RespuestaSkylab: ...
     async def sincronizar(self) -> RespuestaSkylab: ...
     async def publicar(self) -> RespuestaSkylab: ...
@@ -70,6 +71,10 @@ class ServicioNotion:
         ds_entrenamientos: str,
         hoy: Callable[[], date] = date.today,
         sync_cada_ciclos: int = 10,
+        ds_resumen: str = "",
+        ds_ejecuciones: str = "",
+        ds_carga: str = "",
+        ahora: Callable[[], datetime] = lambda: datetime.now().astimezone(),
     ):
         self.notion = notion
         self.skylab = skylab
@@ -78,6 +83,8 @@ class ServicioNotion:
         self.ds_entrenamientos = ds_entrenamientos
         self.hoy = hoy
         self.sync_cada_ciclos = sync_cada_ciclos
+        self.ds_resumen, self.ds_ejecuciones, self.ds_carga = ds_resumen, ds_ejecuciones, ds_carga
+        self.ahora = ahora
         self._ciclos = 0
 
     async def ciclo(self) -> ResumenCiclo:
@@ -92,7 +99,31 @@ class ServicioNotion:
         await self.sincronizar_ficha(resumen)
         await self.atender_peticiones(resumen)
         await self.volcar_plan(resumen)
+        if self.ds_resumen and self.ds_ejecuciones and self.ds_carga:
+            await self.volcar_monitor(resumen)
         return resumen
+
+    # ---------- 5. monitor ----------
+
+    async def volcar_monitor(self, resumen: ResumenCiclo) -> None:
+        """La capa gold (coste y rendimiento del agente, carga semanal) en la
+        página Monitor, y el estado del servicio."""
+        respuesta = await self.skylab.monitor()
+        if not respuesta.ok:
+            resumen.avisos.append(f"Monitor: {respuesta.detalle}")
+            return
+        gold = respuesta.cuerpo
+        for ds, filas, traducir, clave in (
+            (self.ds_ejecuciones, gold["ejecuciones"], t.propiedades_ejecucion, lambda e: str(e["id"])),
+            (self.ds_carga, gold["semanas"], t.propiedades_carga, lambda s: s["semana"]),
+        ):
+            existentes = {p.leer(f, "Clave"): f for f in await self.notion.consultar(ds)}
+            for fila in filas:
+                await self._guardar(ds, existentes.get(clave(fila)), traducir(fila), resumen)
+
+        total = {p.leer(f, "Clave"): f for f in await self.notion.consultar(self.ds_resumen)}.get("total")
+        deseadas = t.propiedades_resumen(gold["resumen"], self.ahora(), resumen.avisos)
+        await self._guardar(self.ds_resumen, total, deseadas, resumen)
 
     # ---------- 1. ficha ----------
 
