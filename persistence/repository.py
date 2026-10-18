@@ -256,6 +256,21 @@ def ajuste_aceptado(db: Session, plan_id: int, semana: date) -> Optional[int]:
     )
 
 
+def ajustes_aceptados(db: Session, plan_id: int, semana: date) -> int:
+    """Cuántos ajustes semanales aceptados (con versión nueva del plan) tiene
+    esa semana cerrada: el primero y los recálculos."""
+    return db.scalar(
+        select(func.count())
+        .select_from(EjecucionAgenteFila)
+        .join(PlanVersionFila, EjecucionAgenteFila.plan_version_id == PlanVersionFila.id)
+        .where(
+            PlanVersionFila.plan_id == plan_id,
+            EjecucionAgenteFila.operacion == "ajuste_semanal",
+            EjecucionAgenteFila.semana == semana,
+        )
+    )
+
+
 def guardar_ficha(db: Session, ficha: FichaAtleta) -> int:
     """Añade una versión de la ficha del atleta; pasa a ser la vigente."""
     fila = FichaAtletaFila(contenido=ficha.model_dump(mode="json"))

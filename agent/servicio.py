@@ -37,6 +37,15 @@ class AjusteYaHecho(RuntimeError):
     """La semana cerrada ya se ajustó: repetir el ciclo no vuelve a llamar al modelo."""
 
 
+class RecalculosAgotados(RuntimeError):
+    """La semana ya se recalculó el máximo de veces: cada recálculo es una
+    llamada al modelo y cuesta dinero."""
+
+
+# Recálculos permitidos por semana cerrada, además del ajuste normal.
+MAX_RECALCULOS_POR_SEMANA = 2
+
+
 class PerfilIncompleto(RuntimeError):
     """El perfil no tiene lo necesario para planificar sin inventar."""
 
@@ -157,13 +166,18 @@ def ajuste_semanal(
     rangos = rangos_fc(perfil.zonas_fc, atleta.umbrales) if atleta else None
     cerrado = _ultimo_microciclo_cerrado(plan, hoy)
     semana = cerrado.fecha_inicio if cerrado else None
-    if semana is not None and not forzar:
+    if semana is not None:
         with sesiones_db() as db:
             version = repo.ajuste_aceptado(db, plan_id, semana)
-        if version is not None:
+            hechos = repo.ajustes_aceptados(db, plan_id, semana)
+        if version is not None and not forzar:
             raise AjusteYaHecho(
                 f"La semana del {semana} ya se ajustó (versión {version} del plan {plan_id}). "
                 "Usa forzar para rehacerlo."
+            )
+        if forzar and hechos > MAX_RECALCULOS_POR_SEMANA:
+            raise RecalculosAgotados(
+                f"La semana del {semana} ya se recalculó {hechos - 1} veces (máximo {MAX_RECALCULOS_POR_SEMANA})."
             )
     evaluacion = evaluar_semana(cerrado, sesiones, perfil, rangos=rangos) if cerrado else None
 

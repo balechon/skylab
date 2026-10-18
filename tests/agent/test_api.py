@@ -68,3 +68,25 @@ def test_atleta_valida_la_ficha(cliente):
     respuesta = cliente.put("/atleta", headers=CABECERA, json={"edad": 31, "umbrales": {"fc_aerobico": 170, "fc_lactato": 150}})
     assert respuesta.status_code == 422
     assert cliente.put("/atleta", json={"edad": 31}).status_code == 401
+
+
+
+def test_plan_y_sesiones_exigen_token(cliente):
+    assert cliente.get("/plan").status_code == 401
+    assert cliente.get("/sesiones?desde=2026-10-01&hasta=2026-10-07").status_code == 401
+
+
+def test_sesiones_valida_el_rango(cliente):
+    respuesta = cliente.get("/sesiones?desde=2026-10-07&hasta=2026-10-01", headers=CABECERA)
+    assert respuesta.status_code == 422
+
+
+def test_recalculos_agotados_devuelve_409(cliente, monkeypatch):
+    from agent import servicio
+
+    def agotado(sesiones_db, modelo, forzar=False, comentarios=None):
+        raise servicio.RecalculosAgotados("ya se recalculó 2 veces")
+
+    monkeypatch.setattr(servicio, "ajuste_semanal", agotado)
+    respuesta = cliente.post("/semana/ajustar?forzar=true", headers=CABECERA)
+    assert respuesta.status_code == 409 and "2 veces" in respuesta.json()["detail"]

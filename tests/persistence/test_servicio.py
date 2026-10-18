@@ -191,3 +191,46 @@ zonas_fc:
         _, plan = repo.plan_vigente(db)
     assert respuesta.version == 1
     assert (plan.rangos_fc[ZonasFC.Z2].minimo, plan.rangos_fc[ZonasFC.Z2].maximo) == (134, 149)
+
+
+
+def test_como_mucho_dos_recalculos_por_semana(sesiones_db):
+    vigente = plan_valido(version=1, primera=ANTERIOR, detallar=0)
+    with sesiones_db.begin() as db:
+        repo.crear_plan(db, vigente, perfil="ejemplo_didactico")
+
+    def ajuste(version):
+        plan = plan_valido(version=version, primera=ANTERIOR, detallar=1)
+        plan.mesociclos[0].microciclos[0] = vigente.mesociclos[0].microciclos[0]
+        resultado = resultado_valido(plan, regla_ids=["EJEMPLO-AJUSTE-001", "EJEMPLO-PROGRESION-001", "EJEMPLO-BLOQUES-001"])
+        resultado.feedback = feedback_ajuste()
+        return _entrega(resultado)
+
+    assert servicio.ajuste_semanal(sesiones_db, ajuste(2), hoy=HOY).version == 2
+    assert servicio.ajuste_semanal(sesiones_db, ajuste(3), hoy=HOY, forzar=True).version == 3
+    assert servicio.ajuste_semanal(sesiones_db, ajuste(4), hoy=HOY, forzar=True).version == 4
+    sin_llamadas = ModeloFalso(respuestas=[])
+    with pytest.raises(servicio.RecalculosAgotados, match="2 veces"):
+        servicio.ajuste_semanal(sesiones_db, sin_llamadas, hoy=HOY, forzar=True)
+    assert sin_llamadas.llamadas == []
+
+
+def test_api_devuelve_el_plan_y_las_sesiones(sesiones_db, monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from agent.api import app, obtener_sesiones_db
+    from core.training import SesionRealizada
+
+    with sesiones_db.begin() as db:
+        plan_id = repo.crear_plan(db, plan_valido(), perfil="ejemplo_didactico")
+        repo.guardar_sesiones(db, [SesionRealizada(garmin_activity_id=1, fecha=HOY, duracion=timedelta(minutes=40), distancia_km=7)])
+    app.dependency_overrides[obtener_sesiones_db] = lambda: sesiones_db
+    try:
+        monkeypatch.setenv("SKYLAB_API_TOKEN", "t")
+        cliente = TestClient(app)
+        plan = cliente.get("/plan", headers={"Authorization": "Bearer t"}).json()
+        assert (plan["plan_id"], plan["version"], plan["perfil"]) == (plan_id, 1, "ejemplo_didactico")
+        sesiones = cliente.get(f"/sesiones?desde={HOY}&hasta={HOY}", headers={"Authorization": "Bearer t"}).json()
+        assert [s["garmin_activity_id"] for s in sesiones] == [1]
+    finally:
+        app.dependency_overrides.clear()

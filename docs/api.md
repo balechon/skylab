@@ -15,8 +15,8 @@ servicios responden 503.
 
 | Servicio | Puerto | Endpoints |
 |---|---|---|
-| skylab-api | 8000 | `POST /plan`, `POST /semana/ajustar` |
-| skylab-sync | 8001 | `POST /sync`, `POST /publicar` |
+| skylab-api | 8000 | `POST /plan`, `POST /semana/ajustar`, `GET /plan`, `GET /sesiones`, `GET`/`PUT /atleta` |
+| skylab-sync | 8001 | `POST /sync`, `POST /publicar` (`?forzar=true` para volver a subir la semana) |
 
 **skylab-api**
 - `POST /plan` con `{"modo": "Construcción", "perfil": "<perfil>", "fecha_objetivo": "AAAA-MM-DD"}`
@@ -24,7 +24,11 @@ servicios responden 503.
   no existe; 422 si el perfil no define la secuencia de bloques del modo.
 - `POST /semana/ajustar` → evalúa la semana cerrada y crea la versión
   siguiente del plan vigente. 409 si no hay plan activo, o si esa semana ya
-  se ajustó (no se vuelve a llamar al modelo; `?forzar=true` para rehacerla).
+  se ajustó (no se vuelve a llamar al modelo; `?forzar=true` para rehacerla,
+  como mucho 2 veces por semana: cada recálculo es una llamada al modelo).
+- `GET /plan` → plan vigente: `{plan_id, version, perfil, plan}`. 404 si no hay.
+- `GET /sesiones?desde=AAAA-MM-DD&hasta=AAAA-MM-DD` → sesiones realizadas
+  (de Garmin) en ese rango.
 - Ambos responden `{estado, resumen, plan_id, version, accion,
   justificaciones, violaciones, detalle, tokens_entrada, tokens_salida}`.
 

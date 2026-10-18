@@ -3,6 +3,8 @@
 #
 #   GET  /health            sin autenticación (healthcheck)
 #   POST /plan              crear un ciclo nuevo
+#   GET  /plan              plan vigente (id, versión, perfil y el plan completo)
+#   GET  /sesiones          sesiones realizadas entre ?desde y ?hasta
 #   GET  /atleta            ficha vigente del atleta
 #   PUT  /atleta            guarda una versión nueva de la ficha
 #   POST /semana/ajustar    ajuste semanal del plan vigente; cuerpo opcional con
@@ -17,6 +19,7 @@
 # token no está configurado, la API se niega a operar en vez de quedar abierta.
 
 import hmac
+from datetime import date
 import os
 from functools import lru_cache
 from typing import Any, Optional
@@ -30,6 +33,7 @@ from agent import servicio
 from agent.esquemas import ComentariosAtleta, SolicitudCiclo
 from agent.llm import crear_modelo
 from core.athlete import FichaAtleta
+from core.training import Plan, SesionRealizada
 from persistence import repository as repo
 from persistence.db import crear_engine, crear_sesiones
 
@@ -122,7 +126,7 @@ def ajustar_semana(
 ) -> RespuestaPlan:
     try:
         respuesta = servicio.ajuste_semanal(sesiones_db, modelo, forzar=forzar, comentarios=comentarios)
-    except (servicio.SinPlanVigente, servicio.AjusteYaHecho) as error:
+    except (servicio.SinPlanVigente, servicio.AjusteYaHecho, servicio.RecalculosAgotados) as error:
         raise HTTPException(status_code=409, detail=str(error))
     except servicio.PerfilIncompleto as error:
         raise HTTPException(status_code=422, detail=str(error))
@@ -145,3 +149,32 @@ def guardar_atleta(ficha: FichaAtleta, sesiones_db: sessionmaker = Depends(obten
     with sesiones_db.begin() as db:
         repo.guardar_ficha(db, ficha)
     return ficha
+
+
+
+class PlanVigente(BaseModel):
+    plan_id: int
+    version: int
+    perfil: str
+    plan: Plan
+
+
+@app.get("/plan", dependencies=[Depends(exigir_token)])
+def obtener_plan(sesiones_db: sessionmaker = Depends(obtener_sesiones_db)) -> PlanVigente:
+    with sesiones_db() as db:
+        vigente = repo.plan_vigente(db)
+        if vigente is None:
+            raise HTTPException(status_code=404, detail="No hay un plan activo")
+        plan_id, plan = vigente
+        perfil = repo.perfil_del_plan(db, plan_id)
+    return PlanVigente(plan_id=plan_id, version=plan.version, perfil=perfil, plan=plan)
+
+
+@app.get("/sesiones", dependencies=[Depends(exigir_token)])
+def obtener_sesiones(
+    desde: date, hasta: date, sesiones_db: sessionmaker = Depends(obtener_sesiones_db)
+) -> list[SesionRealizada]:
+    if hasta < desde:
+        raise HTTPException(status_code=422, detail="hasta debe ser posterior o igual a desde")
+    with sesiones_db() as db:
+        return repo.sesiones_entre(db, desde, hasta)
