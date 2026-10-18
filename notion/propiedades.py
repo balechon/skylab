@@ -38,7 +38,9 @@ def fecha(dia: Optional[date]) -> dict[str, Any]:
 
 
 def fecha_hora(momento: Optional[datetime]) -> dict[str, Any]:
-    return {"date": {"start": momento.isoformat()} if momento else None}
+    # Notion guarda las horas al minuto: se envían ya redondeadas para que la
+    # comparación con lo guardado no vea siempre una diferencia.
+    return {"date": {"start": momento.replace(second=0, microsecond=0).isoformat()} if momento else None}
 
 
 def casilla(marcada: bool) -> dict[str, Any]:
