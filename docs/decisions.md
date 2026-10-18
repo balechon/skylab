@@ -600,3 +600,18 @@ mínima de la salida larga y máximo de tiempo en Z2.
 **Por qué**: Uphill Athlete organiza el macrociclo por tipos de semana y
 cambia sus reglas según el atleta (p. ej. una o dos sesiones intensas según
 la deficiencia aeróbica). Sin esto, esas reglas quedaban solo en el prompt.
+
+## 2026-10-18 — Perfil de Uphill Athlete activo, con guía del autor
+
+**Decisión**: el perfil pasa a `methodology/profiles/uphill_athlete.yaml`.
+Lo que el motor no comprueba (semanas y macrociclos de ejemplo, tests,
+categorías, reglas por prioridad de carrera, notas A–F) va en un bloque
+`guia` que el agente lee y puede citar por id. `PerfilMetodologia` prohíbe
+claves desconocidas: antes, el loader descartaba en silencio cualquier
+sección que el modelo no conociera.
+
+Umbrales del atleta tras el test del 2026-10-18: AeT 164 (ventilatorio), LT
+179 (estimación de Garmin; el test dio 170 con subida incompleta), sin
+deficiencia aeróbica. Zonas de running configuradas en Garmin Connect con
+los mismos límites que el perfil, para que el tiempo por zona sincronizado
+use las zonas del plan.

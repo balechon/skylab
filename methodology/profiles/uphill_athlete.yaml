@@ -1,12 +1,8 @@
-# BORRADOR — perfil de Uphill Athlete, en revisión.
+# Perfil de Uphill Athlete.
 #
 # Fuente: House, S., Johnston, S. y Jornet, K. "Training for the Uphill
 # Athlete. A Manual for Mountain Runners and Ski Mountaineers". Patagonia
 # Works, 2019. ISBN 978-1-938340-84-0 (rústica).
-#
-# Vive en methodology/borradores/: el sistema solo carga
-# methodology/profiles/, así que este borrador no se usa para planificar
-# hasta que esté revisado y se mueva allí.
 #
 # Cómo está hecho:
 #   - Cada regla resume, con otras palabras, lo que dice el libro y cita el
@@ -26,9 +22,11 @@
 #       → ya existen en el modelo. Las reglas cuyos parámetros conoce el
 #         motor se comprueban en código; el resto las sigue y cita el agente
 #         (quedan como "no evaluables" hasta que tengan evaluador).
-#   categorias_atleta, zonas, tests, tipos_semana, reglas_carreras,
-#   fuera_del_modelo, propuestas_propias
-#       → secciones nuevas: el modelo todavía no las acepta.
+#   zonas_fc, deficiencia_aerobica_pct, tipos_semana
+#       → zonas, test del 10 % y tipos de semana, comprobados en código.
+#   guia (categorías, tabla de zonas, tests, semanas y macrociclos de
+#   ejemplo, reglas por prioridad de carrera, notas A–F, fuera_del_modelo)
+#       → orientación que el agente lee y cita; el motor no la comprueba.
 #
 # Figuras incorporadas: 3.3, 10.1–10.3, 11.7–11.10 y 13.1–13.6. Las de
 # skimo no aplican.
@@ -399,208 +397,211 @@ tipos_semana:
     Carrera: "G. Semana de carrera: solo zona de recuperación, como mucho 4 días; en dos de ellos, 3–4 aceleraciones de 30 s con 3 min suaves entre ellas. Sin fuerza."
 
 # =====================================================================
-# SECCIONES NUEVAS — el modelo todavía no las acepta.
+# guia — orientación del autor que el motor no comprueba: el agente la
+# lee para armar el plan y puede citar sus ids (p. ej. una semana o un
+# macrociclo de ejemplo), pero nunca sustituye a las reglas de arriba.
 # =====================================================================
+guia:
 
-# Las reglas cambian según la categoría del atleta.
-categorias_atleta:
-  - id: "UA-CATEGORIA-1"
-    descripcion: "Construir base: no ha superado las 400 h anuales de entrenamiento específico en los últimos 2 años, o tiene menos de 18 años, o no ha completado bien en los últimos 12 meses una carrera de la distancia o duración objetivo. Lo que más rinde es subir el volumen, despacio; por debajo de 400 h, varios ciclos de base (cap. 11, Step 1)."
-    horas_anuales_max: 400
-  - id: "UA-CATEGORIA-2"
-    descripcion: "Mantener la base y complementarla: más de 400 h anuales durante al menos 2 años, más de 18 años, ha completado bien en los últimos 12 meses una carrera igual o cercana a la objetivo y compite varias veces al año. Lo que más rinde es la especificidad y algo más de intensidad, sin bajar el volumen de Z1–Z2 (cap. 11, Step 1)."
-    horas_anuales_min: 400
+  # Las reglas cambian según la categoría del atleta.
+  categorias_atleta:
+    - id: "UA-CATEGORIA-1"
+      descripcion: "Construir base: no ha superado las 400 h anuales de entrenamiento específico en los últimos 2 años, o tiene menos de 18 años, o no ha completado bien en los últimos 12 meses una carrera de la distancia o duración objetivo. Lo que más rinde es subir el volumen, despacio; por debajo de 400 h, varios ciclos de base (cap. 11, Step 1)."
+      horas_anuales_max: 400
+    - id: "UA-CATEGORIA-2"
+      descripcion: "Mantener la base y complementarla: más de 400 h anuales durante al menos 2 años, más de 18 años, ha completado bien en los últimos 12 meses una carrera igual o cercana a la objetivo y compite varias veces al año. Lo que más rinde es la especificidad y algo más de intensidad, sin bajar el volumen de Z1–Z2 (cap. 11, Step 1)."
+      horas_anuales_min: 400
 
-# Zonas ancladas en el umbral aeróbico (AeT) y en el umbral de lactato (LT),
-# según la figura 3.3. Con tus dos umbrales, las zonas salen en pulsaciones.
-zonas:
-  descripcion: "Cinco zonas por FC ancladas en dos umbrales propios, más precisas que las basadas en porcentajes de FC máx. Los límites son orientativos y varían de un día a otro (cap. 3, A Discussion of Intensity Zones; fig. 3.3)."
-  recuperacion: { fc: "por debajo de AeT − 20 %", esfuerzo: "ligero", metodo: "continuo, 20–60 min" }
-  Z1: { fc: "de AeT − 20 % a AeT − 10 %", esfuerzo: "muy fácil a fácil", metodo: "continuo, de 30 min a varias horas" }
-  Z2: { fc: "de AeT − 10 % a AeT", esfuerzo: "moderado si tu AeT es alto, fácil si es bajo", metodo: "continuo, 30–90 min" }
-  Z3: { fc: "de AeT a LT", esfuerzo: "medio, duro pero divertido, no agotador", metodo: "intervalos de 10–20 min o continuo hasta 60 min" }
-  Z4: { fc: "de LT a FC máx.", esfuerzo: "duro, máximo sostenible", metodo: "intervalos de 30 s a 8 min" }
-  Z5: { fc: "no aplica (la FC no sirve)", esfuerzo: "supramáximo, insostenible", metodo: "intervalos de 8 a 60 s" }
+  # Zonas ancladas en el umbral aeróbico (AeT) y en el umbral de lactato (LT),
+  # según la figura 3.3. Con tus dos umbrales, las zonas salen en pulsaciones.
+  zonas:
+    descripcion: "Cinco zonas por FC ancladas en dos umbrales propios, más precisas que las basadas en porcentajes de FC máx. Los límites son orientativos y varían de un día a otro (cap. 3, A Discussion of Intensity Zones; fig. 3.3)."
+    recuperacion: { fc: "por debajo de AeT − 20 %", esfuerzo: "ligero", metodo: "continuo, 20–60 min" }
+    Z1: { fc: "de AeT − 20 % a AeT − 10 %", esfuerzo: "muy fácil a fácil", metodo: "continuo, de 30 min a varias horas" }
+    Z2: { fc: "de AeT − 10 % a AeT", esfuerzo: "moderado si tu AeT es alto, fácil si es bajo", metodo: "continuo, 30–90 min" }
+    Z3: { fc: "de AeT a LT", esfuerzo: "medio, duro pero divertido, no agotador", metodo: "intervalos de 10–20 min o continuo hasta 60 min" }
+    Z4: { fc: "de LT a FC máx.", esfuerzo: "duro, máximo sostenible", metodo: "intervalos de 30 s a 8 min" }
+    Z5: { fc: "no aplica (la FC no sirve)", esfuerzo: "supramáximo, insostenible", metodo: "intervalos de 8 a 60 s" }
 
-tests:
-  - id: "UA-TEST-001"
-    nombre: "Umbral aeróbico, método MAF"
-    descripcion: "AeT = 180 − edad, con 2 años de entrenamiento regular sin contratiempos. Restar 5 si vuelves de una lesión o un parón largo o enfermas más de 2–3 veces al año; sumar 5 con más de 2 años progresando. Tiende a quedarse corto (cap. 5, Aerobic Threshold Testing)."
-  - id: "UA-TEST-002"
-    nombre: "Umbral aeróbico, marcador ventilatorio"
-    descripcion: "La FC que se puede mantener respirando solo por la nariz o hablando sin cortarse. Solo es fiable con buena base aeróbica (cap. 5, Aerobic Threshold Testing)."
-  - id: "UA-TEST-003"
-    nombre: "Umbral aeróbico, escalones con lactato"
-    descripcion: "Cinta al 5 % o cuesta moderada, 15 min de calentamiento, escalones de 3 min subiendo unas 10 ppm cada uno desde muy bajo. AeT = primer escalón con 2 mmol/L o más, o con una subida de 1 mmol/L (cap. 5, Aerobic Threshold Testing)."
-  - id: "UA-TEST-004"
-    nombre: "Umbral de lactato"
-    descripcion: "Con las piernas frescas (bajar la carga unos días antes): 15–20 min de calentamiento terminando con 2–3 min en Z3, y después el máximo esfuerzo sostenible en subida, 30 min si estás menos entrenado y hasta 60. La FC media es el LT (cap. 5, Lactate Threshold Testing)."
-    duracion_min_minutos: 30
-  - id: "UA-TEST-005"
-    nombre: "Test del 10 %"
-    descripcion: "FC del LT dividida entre la FC del AeT. Más de 1,10 = síndrome de deficiencia aeróbica: más base en Z1–Z2 y no añadir Z3 todavía. 1,10 o menos: menos Z2, más Z1 y recuperación, y se puede introducir Z3 y Z4 (cap. 3, The Ten Percent Test; cap. 5, Getting Started)."
-    umbral_ratio: 1.10
-  - id: "UA-TEST-006"
-    nombre: "Contrarreloj aeróbica"
-    descripcion: "Cada dos semanas, aproximadamente: el mismo recorrido habitual a la FC del AeT, anotando el tiempo. Si el entrenamiento va bien, baja. El ritmo en el AeT debería mejorar cada 2–4 semanas (cap. 5, Getting Started y Summary)."
-    frecuencia_semanas: 2
-  - id: "UA-TEST-007"
-    nombre: "Recuperación diaria"
-    descripcion: "FC en reposo por la mañana (en las mismas condiciones), test del escalón (1–2 min subiendo y bajando un escalón, anotar la bajada de FC al minuto) o test de la escalera. Una FC en reposo elevada pide vigilar los días siguientes (cap. 4, Ways to Monitor for Recovery)."
+  tests:
+    - id: "UA-TEST-001"
+      nombre: "Umbral aeróbico, método MAF"
+      descripcion: "AeT = 180 − edad, con 2 años de entrenamiento regular sin contratiempos. Restar 5 si vuelves de una lesión o un parón largo o enfermas más de 2–3 veces al año; sumar 5 con más de 2 años progresando. Tiende a quedarse corto (cap. 5, Aerobic Threshold Testing)."
+    - id: "UA-TEST-002"
+      nombre: "Umbral aeróbico, marcador ventilatorio"
+      descripcion: "La FC que se puede mantener respirando solo por la nariz o hablando sin cortarse. Solo es fiable con buena base aeróbica (cap. 5, Aerobic Threshold Testing)."
+    - id: "UA-TEST-003"
+      nombre: "Umbral aeróbico, escalones con lactato"
+      descripcion: "Cinta al 5 % o cuesta moderada, 15 min de calentamiento, escalones de 3 min subiendo unas 10 ppm cada uno desde muy bajo. AeT = primer escalón con 2 mmol/L o más, o con una subida de 1 mmol/L (cap. 5, Aerobic Threshold Testing)."
+    - id: "UA-TEST-004"
+      nombre: "Umbral de lactato"
+      descripcion: "Con las piernas frescas (bajar la carga unos días antes): 15–20 min de calentamiento terminando con 2–3 min en Z3, y después el máximo esfuerzo sostenible en subida, 30 min si estás menos entrenado y hasta 60. La FC media es el LT (cap. 5, Lactate Threshold Testing)."
+      duracion_min_minutos: 30
+    - id: "UA-TEST-005"
+      nombre: "Test del 10 %"
+      descripcion: "FC del LT dividida entre la FC del AeT. Más de 1,10 = síndrome de deficiencia aeróbica: más base en Z1–Z2 y no añadir Z3 todavía. 1,10 o menos: menos Z2, más Z1 y recuperación, y se puede introducir Z3 y Z4 (cap. 3, The Ten Percent Test; cap. 5, Getting Started)."
+      umbral_ratio: 1.10
+    - id: "UA-TEST-006"
+      nombre: "Contrarreloj aeróbica"
+      descripcion: "Cada dos semanas, aproximadamente: el mismo recorrido habitual a la FC del AeT, anotando el tiempo. Si el entrenamiento va bien, baja. El ritmo en el AeT debería mejorar cada 2–4 semanas (cap. 5, Getting Started y Summary)."
+      frecuencia_semanas: 2
+    - id: "UA-TEST-007"
+      nombre: "Recuperación diaria"
+      descripcion: "FC en reposo por la mañana (en las mismas condiciones), test del escalón (1–2 min subiendo y bajando un escalón, anotar la bajada de FC al minuto) o test de la escalera. Una FC en reposo elevada pide vigilar los días siguientes (cap. 4, Ways to Monitor for Recovery)."
 
-# Recetas por tipo de semana: B (base), I (intensidad), R (recuperación),
-# S (especificidad), T (taper) y G (semana de carrera). Cap. 11, Step 3.
-# Semanas de ejemplo del libro: reparto del volumen por día. Los
-# porcentajes son orientativos según el propio libro. "ADS": con síndrome de
-# deficiencia aeróbica, la Z1 pasa a Z2.
-semanas_ejemplo:
-  - id: "UA-SEMANA-TRANSICION-CARGA"
-    fuente: "cap. 10, fig. 10.2"
-    dias:
-      1: "Descanso."
-      2: "Z2, 10 % del volumen semanal. Tarde: core y fuerza general."
-      3: "Z1, 25 %."
-      4: "Recuperación, 10 %."
-      5: "Z2, 10 %. Tarde: core y fuerza general."
-      6: "Z1 o recuperación, 15 %."
-      7: "Larga en Z1 o Z2, 30 %."
-  - id: "UA-SEMANA-TRANSICION-RECUPERACION"
-    fuente: "cap. 10, fig. 10.3 (carga al 50 %)"
-    dias:
-      1: "Descanso."
-      2: "Z1, 20 %."
-      3: "Z2, 15 %."
-      4: "Tarde: core y fuerza general."
-      5: "Recuperación, 15 %."
-      6: "Z1, 20 %."
-      7: "Larga en Z1 o Z2, 30 %."
-  - id: "UA-SEMANA-CAT1-BASE-INICIAL"
-    fuente: "cap. 13, fig. 13.1 (al menos las 8 primeras semanas: acumular tiempo de carrera en baja intensidad)"
-    dias:
-      1: "Descanso o recuperación ligera tras un fin de semana grande."
-      2: "Z1 (Z2 con ADS), hasta 15 % del desnivel semanal. Tarde: core y fuerza general."
-      3: "Z2, hasta 15 % del desnivel."
-      4: "Z1 o recuperación, al menos 15 % del tiempo semanal, en llano o pendiente suave. Tarde opcional: ME."
-      5: "Sprints en cuesta, 6–8×10 s (cuando la fuerza lo permita)."
-      6: "Z2, hasta 15 % del desnivel. Tarde opcional: Z1 o recuperación, hasta 5 %."
-      7: "Z1 (Z2 con ADS), hasta 40 % del desnivel."
-  - id: "UA-SEMANA-CAT1-BASE-FINAL"
-    fuente: "cap. 13, fig. 13.2 (se introduce intensidad; se reduce o quita la ME al empezar la Z3)"
-    dias:
-      1: "Descanso o recuperación ligera."
-      2: "Z1 o recuperación, hasta 10 % del tiempo, en llano o pendiente suave. Tarde: core."
-      3: "Z1–Z3, hasta 15 % del desnivel, con 5–8 % en Z3; empezar con 3×8 min."
-      4: "Z1 (Z2 con ADS), hasta 15 % del desnivel."
-      5: "Sprints en cuesta, 6–8×10 s. Tarde opcional: Z1 o recuperación, hasta 5 %."
-      6: "Z1 (Z2 con ADS), hasta 15 % del desnivel."
-      7: "Z1 (Z2 con ADS), hasta 40 % del desnivel."
-  - id: "UA-SEMANA-CAT1-ESPECIFICA"
-    fuente: "cap. 13, fig. 13.3 (final de la base: dos días grandes seguidos)"
-    dias:
-      1: "Descanso o recuperación ligera."
-      2: "Z1 o recuperación, hasta 10 % del tiempo. Tarde: core."
-      3: "Z1–Z3, hasta 10 % del desnivel, hasta 5 % en Z3; empezar con 3×8 min."
-      4: "Z1, hasta 10 % de distancia y desnivel."
-      5: "Sprints en cuesta, 6–8×10 s."
-      6: "Z1, 30–40 % de distancia y desnivel."
-      7: "Z1, 30–40 % de distancia y desnivel."
-  - id: "UA-SEMANA-CAT2-ESPECIFICA"
-    fuente: "cap. 13, fig. 13.4 (más volumen e imitar la carrera larga)"
-    dias:
-      1: "Descanso o recuperación ligera."
-      2: "Z1 o recuperación, hasta 10 % del tiempo. Tarde: core."
-      3: "ME, en lugar de intervalos de Z3–Z4 durante buena parte de la base."
-      4: "Z1, hasta 10 % de distancia y desnivel."
-      5: "Z1, hasta 10 % de distancia y desnivel."
-      6: "Z1, hasta 30 % de distancia y desnivel."
-      7: "Z1, 30–40 % de distancia y desnivel."
-  - id: "UA-SEMANA-CAT2-BASE-FINAL"
-    fuente: "cap. 13, fig. 13.5 (más carreras y más cortas en la temporada)"
-    dias:
-      1: "Descanso o recuperación ligera."
-      2: "Z1–Z3, hasta 15 % de distancia y desnivel, subiendo poco a poco hasta 5 % en Z3 (intervalos, tempo o progresivo). Tarde: core."
-      3: "Z1 o recuperación, hasta 10 % del tiempo."
-      4: "Sprints en cuesta, 6–8×10 s, dentro de un Z1 de hasta 10 % de la distancia."
-      5: "Z1–Z4, hasta 10 % de distancia y desnivel; tras 4–6 semanas de Z3, hasta 5 % en Z4, empezando con 30/30 cuando la Z3 llegue al 10 %."
-      6: "Z1, hasta 15 % de distancia y desnivel."
-      7: "Z1, hasta 40 % de distancia y desnivel."
-  - id: "UA-SEMANA-CAT2-BASE-DESNIVEL"
-    fuente: "cap. 13, fig. 13.6 (carrera objetivo con mucho más desnivel del habitual)"
-    dias:
-      1: "Descanso o recuperación ligera."
-      2: "ME y core. Tarde: recuperación."
-      3: "Z1 o recuperación, hasta 10 % del desnivel."
-      4: "Z1 o recuperación, hasta 10 % de distancia y desnivel."
-      5: "Z2 en desnivel, hasta 15 %."
-      6: "Z1 (Z2 con ADS), hasta 25 % del desnivel. Tarde: sprints en cuesta, 6–8×10 s."
-      7: "Z1 (Z2 con ADS), hasta 40 % del desnivel."
-    nota: "Mejor a pie y al aire libre en terreno con desnivel; valen escaleras de un edificio, cinta inclinada o máquina de escaleras."
+  # Recetas por tipo de semana: B (base), I (intensidad), R (recuperación),
+  # S (especificidad), T (taper) y G (semana de carrera). Cap. 11, Step 3.
+  # Semanas de ejemplo del libro: reparto del volumen por día. Los
+  # porcentajes son orientativos según el propio libro. "ADS": con síndrome de
+  # deficiencia aeróbica, la Z1 pasa a Z2.
+  semanas_ejemplo:
+    - id: "UA-SEMANA-TRANSICION-CARGA"
+      fuente: "cap. 10, fig. 10.2"
+      dias:
+        1: "Descanso."
+        2: "Z2, 10 % del volumen semanal. Tarde: core y fuerza general."
+        3: "Z1, 25 %."
+        4: "Recuperación, 10 %."
+        5: "Z2, 10 %. Tarde: core y fuerza general."
+        6: "Z1 o recuperación, 15 %."
+        7: "Larga en Z1 o Z2, 30 %."
+    - id: "UA-SEMANA-TRANSICION-RECUPERACION"
+      fuente: "cap. 10, fig. 10.3 (carga al 50 %)"
+      dias:
+        1: "Descanso."
+        2: "Z1, 20 %."
+        3: "Z2, 15 %."
+        4: "Tarde: core y fuerza general."
+        5: "Recuperación, 15 %."
+        6: "Z1, 20 %."
+        7: "Larga en Z1 o Z2, 30 %."
+    - id: "UA-SEMANA-CAT1-BASE-INICIAL"
+      fuente: "cap. 13, fig. 13.1 (al menos las 8 primeras semanas: acumular tiempo de carrera en baja intensidad)"
+      dias:
+        1: "Descanso o recuperación ligera tras un fin de semana grande."
+        2: "Z1 (Z2 con ADS), hasta 15 % del desnivel semanal. Tarde: core y fuerza general."
+        3: "Z2, hasta 15 % del desnivel."
+        4: "Z1 o recuperación, al menos 15 % del tiempo semanal, en llano o pendiente suave. Tarde opcional: ME."
+        5: "Sprints en cuesta, 6–8×10 s (cuando la fuerza lo permita)."
+        6: "Z2, hasta 15 % del desnivel. Tarde opcional: Z1 o recuperación, hasta 5 %."
+        7: "Z1 (Z2 con ADS), hasta 40 % del desnivel."
+    - id: "UA-SEMANA-CAT1-BASE-FINAL"
+      fuente: "cap. 13, fig. 13.2 (se introduce intensidad; se reduce o quita la ME al empezar la Z3)"
+      dias:
+        1: "Descanso o recuperación ligera."
+        2: "Z1 o recuperación, hasta 10 % del tiempo, en llano o pendiente suave. Tarde: core."
+        3: "Z1–Z3, hasta 15 % del desnivel, con 5–8 % en Z3; empezar con 3×8 min."
+        4: "Z1 (Z2 con ADS), hasta 15 % del desnivel."
+        5: "Sprints en cuesta, 6–8×10 s. Tarde opcional: Z1 o recuperación, hasta 5 %."
+        6: "Z1 (Z2 con ADS), hasta 15 % del desnivel."
+        7: "Z1 (Z2 con ADS), hasta 40 % del desnivel."
+    - id: "UA-SEMANA-CAT1-ESPECIFICA"
+      fuente: "cap. 13, fig. 13.3 (final de la base: dos días grandes seguidos)"
+      dias:
+        1: "Descanso o recuperación ligera."
+        2: "Z1 o recuperación, hasta 10 % del tiempo. Tarde: core."
+        3: "Z1–Z3, hasta 10 % del desnivel, hasta 5 % en Z3; empezar con 3×8 min."
+        4: "Z1, hasta 10 % de distancia y desnivel."
+        5: "Sprints en cuesta, 6–8×10 s."
+        6: "Z1, 30–40 % de distancia y desnivel."
+        7: "Z1, 30–40 % de distancia y desnivel."
+    - id: "UA-SEMANA-CAT2-ESPECIFICA"
+      fuente: "cap. 13, fig. 13.4 (más volumen e imitar la carrera larga)"
+      dias:
+        1: "Descanso o recuperación ligera."
+        2: "Z1 o recuperación, hasta 10 % del tiempo. Tarde: core."
+        3: "ME, en lugar de intervalos de Z3–Z4 durante buena parte de la base."
+        4: "Z1, hasta 10 % de distancia y desnivel."
+        5: "Z1, hasta 10 % de distancia y desnivel."
+        6: "Z1, hasta 30 % de distancia y desnivel."
+        7: "Z1, 30–40 % de distancia y desnivel."
+    - id: "UA-SEMANA-CAT2-BASE-FINAL"
+      fuente: "cap. 13, fig. 13.5 (más carreras y más cortas en la temporada)"
+      dias:
+        1: "Descanso o recuperación ligera."
+        2: "Z1–Z3, hasta 15 % de distancia y desnivel, subiendo poco a poco hasta 5 % en Z3 (intervalos, tempo o progresivo). Tarde: core."
+        3: "Z1 o recuperación, hasta 10 % del tiempo."
+        4: "Sprints en cuesta, 6–8×10 s, dentro de un Z1 de hasta 10 % de la distancia."
+        5: "Z1–Z4, hasta 10 % de distancia y desnivel; tras 4–6 semanas de Z3, hasta 5 % en Z4, empezando con 30/30 cuando la Z3 llegue al 10 %."
+        6: "Z1, hasta 15 % de distancia y desnivel."
+        7: "Z1, hasta 40 % de distancia y desnivel."
+    - id: "UA-SEMANA-CAT2-BASE-DESNIVEL"
+      fuente: "cap. 13, fig. 13.6 (carrera objetivo con mucho más desnivel del habitual)"
+      dias:
+        1: "Descanso o recuperación ligera."
+        2: "ME y core. Tarde: recuperación."
+        3: "Z1 o recuperación, hasta 10 % del desnivel."
+        4: "Z1 o recuperación, hasta 10 % de distancia y desnivel."
+        5: "Z2 en desnivel, hasta 15 %."
+        6: "Z1 (Z2 con ADS), hasta 25 % del desnivel. Tarde: sprints en cuesta, 6–8×10 s."
+        7: "Z1 (Z2 con ADS), hasta 40 % del desnivel."
+      nota: "Mejor a pie y al aire libre en terreno con desnivel; valen escaleras de un edificio, cinta inclinada o máquina de escaleras."
 
-# Progresiones de ejemplo (km por semana y tipo de semana). Lectura de los
-# gráficos, aproximada; "?" = etiqueta ilegible. Patrón común: ciclos 3:1,
-# recuperación en torno al 45–65 % de la semana anterior, semanas S antes de
-# la carrera A y taper de 1–3 semanas T.
-macrociclos_ejemplo:
-  - id: "UA-MACRO-50K-CAT1"
-    fuente: "cap. 11, fig. 11.7 (Cat. 1, primer 50K; también sirve para un objetivo personal de distancia parecida). Parte de semanas de 40 km y llega a un pico de 80, en línea con UA-CARGA-003"
-    semanas: "B40 B43 B48 R29 | B51 B55 B60 R32 | B56 I61 I66 R37 | S72 S77 R39 | S77 S80 | T56 T35 G68(50K, A)"
-  - id: "UA-MACRO-100K"
-    fuente: "cap. 11, fig. 11.8 (Cat. 2, una A de 100K con una B de 50K; también para Cat. 1 en su segunda temporada)"
-    semanas: "B48 B51 B60 R32 | B61 B69 B74 R45 | I63? I71 I77 R48 | I80 I87 I95 R48 | S103 S113 T48 G80(50K, B) | R48 I108? S116 S125 | T89 T72 T48 G110(100K, A)"
-  - id: "UA-MACRO-100MI"
-    fuente: "cap. 11, fig. 11.9 (Cat. 2, una A de 100 millas con dos B: 50K y 100K)"
-    semanas: "B68 B72 B80 R43 | B89 B97 B103 R48 | B106 B113 B117 R56 | I113 I116 I121 R56 | I105 I96 G89(50K, B) R56 | I113 I119 I125 R61 | B109 B134 B142 R64 | B129 B80? G105(100K, B) | R48 R64 I89 | S129 R64 S142 R97 S161 R64 S145 R93 S138 | T56 I72 T64 T32 G185(100 millas, A)"
-  - id: "UA-MACRO-TEMPORADA-CAT2"
-    fuente: "cap. 11, fig. 11.10 (Cat. 2 con buena base: varias C y B hacia una A de 100K; las carreras no superan su capacidad y se usan como sesiones duras)"
-    semanas: "B89 B97 B109 R55 | I101 G107(C corta) I113 I117 | R87 G71(VK, B) I93 G126(50K, C) | R84 I105 I113 R72 | G121(C corta) S129 S129 I110 | G48(VK, B) I106 S116 S80 | T56 G129(100K, A) | R48 B79"
+  # Progresiones de ejemplo (km por semana y tipo de semana). Lectura de los
+  # gráficos, aproximada; "?" = etiqueta ilegible. Patrón común: ciclos 3:1,
+  # recuperación en torno al 45–65 % de la semana anterior, semanas S antes de
+  # la carrera A y taper de 1–3 semanas T.
+  macrociclos_ejemplo:
+    - id: "UA-MACRO-50K-CAT1"
+      fuente: "cap. 11, fig. 11.7 (Cat. 1, primer 50K; también sirve para un objetivo personal de distancia parecida). Parte de semanas de 40 km y llega a un pico de 80, en línea con UA-CARGA-003"
+      semanas: "B40 B43 B48 R29 | B51 B55 B60 R32 | B56 I61 I66 R37 | S72 S77 R39 | S77 S80 | T56 T35 G68(50K, A)"
+    - id: "UA-MACRO-100K"
+      fuente: "cap. 11, fig. 11.8 (Cat. 2, una A de 100K con una B de 50K; también para Cat. 1 en su segunda temporada)"
+      semanas: "B48 B51 B60 R32 | B61 B69 B74 R45 | I63? I71 I77 R48 | I80 I87 I95 R48 | S103 S113 T48 G80(50K, B) | R48 I108? S116 S125 | T89 T72 T48 G110(100K, A)"
+    - id: "UA-MACRO-100MI"
+      fuente: "cap. 11, fig. 11.9 (Cat. 2, una A de 100 millas con dos B: 50K y 100K)"
+      semanas: "B68 B72 B80 R43 | B89 B97 B103 R48 | B106 B113 B117 R56 | I113 I116 I121 R56 | I105 I96 G89(50K, B) R56 | I113 I119 I125 R61 | B109 B134 B142 R64 | B129 B80? G105(100K, B) | R48 R64 I89 | S129 R64 S142 R97 S161 R64 S145 R93 S138 | T56 I72 T64 T32 G185(100 millas, A)"
+    - id: "UA-MACRO-TEMPORADA-CAT2"
+      fuente: "cap. 11, fig. 11.10 (Cat. 2 con buena base: varias C y B hacia una A de 100K; las carreras no superan su capacidad y se usan como sesiones duras)"
+      semanas: "B89 B97 B109 R55 | I101 G107(C corta) I113 I117 | R87 G71(VK, B) I93 G126(50K, C) | R84 I105 I113 R72 | G121(C corta) S129 S129 I110 | G48(VK, B) I106 S116 S80 | T56 G129(100K, A) | R48 B79"
 
-reglas_carreras:
-  - id: "UA-CARRERA-001"
-    prioridad: "A"
-    descripcion: "Las carreras hacia las que se construye todo el plan: necesitan un taper importante y pueden necesitar una recuperación larga después. Si hay más de una A en un ciclo, entre ellas va un periodo de base de varias semanas. Lo ideal es una o dos (cap. 9, Outline for Planning)."
-  - id: "UA-CARRERA-002"
-    prioridad: "B"
-    descripcion: "Carreras de preparación para la A, para probar forma, estrategia, material, alimentación y cabeza. No deben exigir mucho más que tu capacidad actual: solo una ligera bajada de carga unos días antes y después, sin romper la progresión (cap. 9, Outline for Planning; cap. 11, T Week)."
-    # Cifras de origen propio (decisión del atleta, 2026-10-17).
-    origen_cifras: "propio"
-    dias_descarga_antes: 3
-    dias_recuperacion_despues: 3
-    carga_pct: 70
-  - id: "UA-CARRERA-003"
-    prioridad: "C"
-    descripcion: "Se entrenan como una sesión más, sin cambiar el plan; pueden ser tests de forma y se pueden añadir más tarde. Durante la base, solo carreras C, que apenas superen lo que haces en tus entrenamientos (cap. 9, Outline for Planning; cap. 11, Introduction to the Base Period)."
-  - id: "UA-CARRERA-004"
-    descripcion: "En temporada larga, entre carreras: al menos 2 semanas entre carreras cortas y 4–6 entre ultras para recuperar y reconstruir la base. Tres semanas entre carreras dejan quizá 10 días de entrenamiento útil (cap. 4, Competition Period)."
-    semanas_entre_cortas_min: 2
-    semanas_entre_ultras_min: 4
+  reglas_carreras:
+    - id: "UA-CARRERA-001"
+      prioridad: "A"
+      descripcion: "Las carreras hacia las que se construye todo el plan: necesitan un taper importante y pueden necesitar una recuperación larga después. Si hay más de una A en un ciclo, entre ellas va un periodo de base de varias semanas. Lo ideal es una o dos (cap. 9, Outline for Planning)."
+    - id: "UA-CARRERA-002"
+      prioridad: "B"
+      descripcion: "Carreras de preparación para la A, para probar forma, estrategia, material, alimentación y cabeza. No deben exigir mucho más que tu capacidad actual: solo una ligera bajada de carga unos días antes y después, sin romper la progresión (cap. 9, Outline for Planning; cap. 11, T Week)."
+      # Cifras de origen propio (decisión del atleta, 2026-10-17).
+      origen_cifras: "propio"
+      dias_descarga_antes: 3
+      dias_recuperacion_despues: 3
+      carga_pct: 70
+    - id: "UA-CARRERA-003"
+      prioridad: "C"
+      descripcion: "Se entrenan como una sesión más, sin cambiar el plan; pueden ser tests de forma y se pueden añadir más tarde. Durante la base, solo carreras C, que apenas superen lo que haces en tus entrenamientos (cap. 9, Outline for Planning; cap. 11, Introduction to the Base Period)."
+    - id: "UA-CARRERA-004"
+      descripcion: "En temporada larga, entre carreras: al menos 2 semanas entre carreras cortas y 4–6 entre ultras para recuperar y reconstruir la base. Tres semanas entre carreras dejan quizá 10 días de entrenamiento útil (cap. 4, Competition Period)."
+      semanas_entre_cortas_min: 2
+      semanas_entre_ultras_min: 4
 
-# Lo que no encaja en el modelo actual. Cada punto pide ampliarlo.
-fuera_del_modelo:
-  - "Fuerza: en la transición, core y fuerza general 2 veces por semana; al principio de la base, fuerza máxima 2 veces por semana; al final de la preparación, la fuerza muscular específica (ME) de tu tipo de carrera (cap. 9, General and Max Strength)."
-  - "Fuerza muscular específica (ME): tras al menos 4 semanas de solo Z1–Z2, una vez por semana durante 8 semanas; se deja al introducir Z3 y Z4, que la mantienen. En exterior: cuesta del 20–50 % o mochila con un 10–15 % de tu peso para empezar. Al principio basta con un día a la semana (cap. 8; cap. 13, Notes on Adding More Intensity)."
-  - "Evaluación de fuerza general (etapas 1 a 3 de piernas, cadera y core) antes de elegir el programa (cap. 7)."
-  - "Caminar en subida cuenta como entrenamiento de carrera: en Z1–Z2 se camina en las subidas para no salir de zona, y se cuenta todo el tiempo, subidas y bajadas (cap. 5, Keep It Simple; cap. 13)."
-  - "Bajadas rápidas: repeticiones cortas (1–2 min) de bajada rápida en algunos rodajes fáciles, más con el paso de las semanas; dos rodajes por semana en semanas B, I y S (cap. 5, Hill Sprints/Bounding and Downhill Speed; cap. 11)."
-  - "Notas A–F de cada sesión según cómo te sentiste (A sobrado, B bien, C plano, D sin terminar o recortada, F sin entrenar por fatiga o enfermedad). Más de dos C seguidas, o una C y una D en la misma semana: parar y analizar, porque no se está asimilando la carga (cap. 4, Grading Your Workouts)."
-  - "Continuidad: faltas de uno o dos días no importan si no restan más de un 5 % de la carga mensual; si la restan, hay que dar un paso atrás en el plan. No se puede hacer como si se hubiera entrenado lo que se perdió (cap. 3, Continuity)."
-  - "Fatiga muscular frente a energética: qué hacer y qué evitar con agujetas, piernas pesadas o falta de energía, incluido un análisis de ferritina, que con menos de 50 ng/ml puede afectar al rendimiento (cap. 4, The Fatigue Matrix)."
-  - "Seguimiento de la carga en horas y desnivel (no en km) y escala de dificultad técnica del terreno de 1 a 4 (cap. 4, Use a Training Log)."
-  - "Volumen inicial sin historial, en horas anuales por edad: 20–35 años, 400 h; 35–50, 350 h; más de 50, 300 h. Empezar más suave de lo que crees (cap. 10, Where to Start)."
-  - "Sin mejoras pequeñas en varias semanas entrenando más de 8 h semanales: algo falla (recuperación, carga o progresión demasiado rápida); ajustar la carga o el estilo de vida (cap. 9, Outline for Planning)."
-  - "Disponibilidad real: calcular las horas libres de la semana después de trabajo, sueño, comidas, viajes y familia; es el techo de horas de entrenamiento (cap. 9, Outline for Planning)."
-  - "Atletas de fibra rápida: más base Z1–Z2 y repeticiones de Z4 más cortas (menos de 2 min). De fibra lenta: dosis frecuentes y pequeñas de velocidad (cap. 3, Individuality)."
+  # Lo que no encaja en el modelo actual. Cada punto pide ampliarlo.
+  fuera_del_modelo:
+    - "Fuerza: en la transición, core y fuerza general 2 veces por semana; al principio de la base, fuerza máxima 2 veces por semana; al final de la preparación, la fuerza muscular específica (ME) de tu tipo de carrera (cap. 9, General and Max Strength)."
+    - "Fuerza muscular específica (ME): tras al menos 4 semanas de solo Z1–Z2, una vez por semana durante 8 semanas; se deja al introducir Z3 y Z4, que la mantienen. En exterior: cuesta del 20–50 % o mochila con un 10–15 % de tu peso para empezar. Al principio basta con un día a la semana (cap. 8; cap. 13, Notes on Adding More Intensity)."
+    - "Evaluación de fuerza general (etapas 1 a 3 de piernas, cadera y core) antes de elegir el programa (cap. 7)."
+    - "Caminar en subida cuenta como entrenamiento de carrera: en Z1–Z2 se camina en las subidas para no salir de zona, y se cuenta todo el tiempo, subidas y bajadas (cap. 5, Keep It Simple; cap. 13)."
+    - "Bajadas rápidas: repeticiones cortas (1–2 min) de bajada rápida en algunos rodajes fáciles, más con el paso de las semanas; dos rodajes por semana en semanas B, I y S (cap. 5, Hill Sprints/Bounding and Downhill Speed; cap. 11)."
+    - "Notas A–F de cada sesión según cómo te sentiste (A sobrado, B bien, C plano, D sin terminar o recortada, F sin entrenar por fatiga o enfermedad). Más de dos C seguidas, o una C y una D en la misma semana: parar y analizar, porque no se está asimilando la carga (cap. 4, Grading Your Workouts)."
+    - "Continuidad: faltas de uno o dos días no importan si no restan más de un 5 % de la carga mensual; si la restan, hay que dar un paso atrás en el plan. No se puede hacer como si se hubiera entrenado lo que se perdió (cap. 3, Continuity)."
+    - "Fatiga muscular frente a energética: qué hacer y qué evitar con agujetas, piernas pesadas o falta de energía, incluido un análisis de ferritina, que con menos de 50 ng/ml puede afectar al rendimiento (cap. 4, The Fatigue Matrix)."
+    - "Seguimiento de la carga en horas y desnivel (no en km) y escala de dificultad técnica del terreno de 1 a 4 (cap. 4, Use a Training Log)."
+    - "Volumen inicial sin historial, en horas anuales por edad: 20–35 años, 400 h; 35–50, 350 h; más de 50, 300 h. Empezar más suave de lo que crees (cap. 10, Where to Start)."
+    - "Sin mejoras pequeñas en varias semanas entrenando más de 8 h semanales: algo falla (recuperación, carga o progresión demasiado rápida); ajustar la carga o el estilo de vida (cap. 9, Outline for Planning)."
+    - "Disponibilidad real: calcular las horas libres de la semana después de trabajo, sueño, comidas, viajes y familia; es el techo de horas de entrenamiento (cap. 9, Outline for Planning)."
+    - "Atletas de fibra rápida: más base Z1–Z2 y repeticiones de Z4 más cortas (menos de 2 min). De fibra lenta: dosis frecuentes y pequeñas de velocidad (cap. 3, Individuality)."
 
-# Notas A–F del libro (cap. 4, Grading Your Workouts) a partir de la
-# sensación que registra Garmin. Origen propio (decisión del atleta,
-# 2026-10-17). Una sesión planificada y no hecha cuenta como F. Regla del
-# libro: más de dos C seguidas, o una C y una D en la misma semana, indica
-# que no se está asimilando la carga.
-notas_sesion:
-  origen: "propio"
-  desde_sensacion_garmin:
-    "Muy fuerte": "A"
-    "Fuerte": "A"
-    "Normal": "B"
-    "Débil": "C"
-    "Muy débil": "D"
-  no_realizada: "F"
+  # Notas A–F del libro (cap. 4, Grading Your Workouts) a partir de la
+  # sensación que registra Garmin. Origen propio (decisión del atleta,
+  # 2026-10-17). Una sesión planificada y no hecha cuenta como F. Regla del
+  # libro: más de dos C seguidas, o una C y una D en la misma semana, indica
+  # que no se está asimilando la carga.
+  notas_sesion:
+    origen: "propio"
+    desde_sensacion_garmin:
+      "Muy fuerte": "A"
+      "Fuerte": "A"
+      "Normal": "B"
+      "Débil": "C"
+      "Muy débil": "D"
+    no_realizada: "F"

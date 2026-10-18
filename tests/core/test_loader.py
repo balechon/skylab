@@ -102,3 +102,26 @@ def test_los_borradores_son_yaml_valido(ruta):
     # Un borrador no tiene que ser un perfil completo (no se carga para
     # planificar), pero sí YAML que se pueda leer al pasarlo a profiles/.
     assert isinstance(yaml.safe_load(ruta.read_text(encoding="utf-8")), dict)
+
+
+def test_una_clave_desconocida_no_se_descarta_en_silencio(tmp_path):
+    with pytest.raises(ValidationError, match="secuencias_bloque"):
+        cargar_perfil(_escribir(tmp_path, PERFIL_MINIMO + "secuencias_bloque: []\n"))
+
+
+def test_los_ids_de_la_guia_se_pueden_citar(tmp_path):
+    guia = """
+guia:
+  semanas_ejemplo:
+    - id: "TEST-SEMANA-001"
+      dias: {1: "Descanso."}
+"""
+    perfil = cargar_perfil(_escribir(tmp_path, PERFIL_MINIMO + guia))
+    assert "TEST-SEMANA-001" in perfil.todos_los_ids()
+
+
+def test_perfil_uphill_athlete():
+    perfil = cargar_perfil(PERFILES_DIR / "uphill_athlete.yaml")
+    assert perfil.secuencia_para("Construcción").objetivos[0].value == "Base aeróbica"
+    assert perfil.zonas_fc is not None and perfil.tipos_semana is not None
+    assert "UA-MACRO-50K-CAT1" in perfil.todos_los_ids()

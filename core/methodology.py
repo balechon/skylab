@@ -2,9 +2,9 @@
 # methodology/profiles/_template.yaml).
 
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from core.training import ClaseSesion, ModoPlan, ObjetivoMesociclo, TipoMicrociclo, TipoSesion, ZonasFC
 
@@ -173,6 +173,16 @@ class SecuenciaBloques(BaseModel):
     objetivos: list[ObjetivoMesociclo] = Field(min_length=1)
 
 
+def _ids_en(valor: Any) -> list[str]:
+    """Todos los campos `id` dentro de la guía, a cualquier profundidad."""
+    if isinstance(valor, dict):
+        propios = [valor["id"]] if isinstance(valor.get("id"), str) else []
+        return propios + [i for v in valor.values() for i in _ids_en(v)]
+    if isinstance(valor, list):
+        return [i for v in valor for i in _ids_en(v)]
+    return []
+
+
 class AnclaZona(str, Enum):
     UMBRAL_AEROBICO = "AeT"
     UMBRAL_LACTATO = "LT"
@@ -230,6 +240,14 @@ class PerfilMetodologia(BaseModel):
     zonas_fc: Optional[DefinicionZonas] = None
     tipos_semana: Optional[TiposSemana] = None
     deficiencia_aerobica_pct: Optional[float] = Field(default=None, gt=0)
+    # Orientación del autor que el motor no comprueba (semanas y macrociclos
+    # de ejemplo, tests, criterios...). El agente la lee y puede citar sus
+    # ids; nunca sustituye a las reglas.
+    guia: dict[str, Any] = Field(default_factory=dict)
+
+    # Una clave desconocida es casi siempre un error de escritura: mejor
+    # fallar al cargar que descartarla en silencio.
+    model_config = ConfigDict(extra="forbid")
 
     def todos_los_ids(self) -> list[str]:
         """IDs de todas las reglas del perfil, de todos los tipos."""
@@ -244,7 +262,7 @@ class PerfilMetodologia(BaseModel):
                 self.secuencias_bloques,
             )
             for r in lista
-        ] + [d.id for d in (self.zonas_fc, self.tipos_semana) if d is not None]
+        ] + [d.id for d in (self.zonas_fc, self.tipos_semana) if d is not None] + _ids_en(self.guia)
 
     def secuencia_para(self, modo: ModoPlan) -> Optional[SecuenciaBloques]:
         return next((s for s in self.secuencias_bloques if s.modo == modo), None)
